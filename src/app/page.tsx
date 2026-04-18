@@ -2,43 +2,69 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Scissors, Clock, Truck, Shield } from "lucide-react";
+import { DEFAULT_CONFIG } from "@/app/api/admin/site-config/route";
+import { prisma } from "@/lib/prisma";
 
-const features = [
-  { icon: Scissors, title: "Feito sob encomenda", desc: "Cada produto produzido com atenção e qualidade para a sua barbearia." },
-  { icon: Clock, title: "Prazo de 15 dias úteis", desc: "Produção e entrega com prazo garantido após confirmação de pagamento." },
-  { icon: Truck, title: "Entrega em todo o Brasil", desc: "Envio pelos Correios (PAC e SEDEX) para qualquer cidade." },
-  { icon: Shield, title: "Qualidade garantida", desc: "Materiais profissionais selecionados para o dia a dia da barbearia." },
-];
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+const FEATURE_ICONS = [Scissors, Clock, Truck, Shield];
+
+async function getSiteConfig(): Promise<Record<string, string>> {
+  try {
+    const saved = await prisma.siteConfig.findMany();
+    const savedMap = Object.fromEntries(saved.map((c) => [c.key, c.value]));
+    return Object.fromEntries(DEFAULT_CONFIG.map((d) => [d.key, savedMap[d.key] ?? d.value]));
+  } catch {
+    return Object.fromEntries(DEFAULT_CONFIG.map((d) => [d.key, d.value]));
+  }
+}
+
+export default async function HomePage() {
+  const cfg = await getSiteConfig();
+
+  const features = [1, 2, 3, 4].map((n, i) => ({
+    icon: FEATURE_ICONS[i],
+    title: cfg[`feature_${n}_title`],
+    desc: cfg[`feature_${n}_desc`],
+  }));
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
       {/* Hero */}
-      <section className="flex-1 flex items-center justify-center px-4 py-20 text-center">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-full px-4 py-1.5 text-sm text-[var(--gold)] font-medium mb-6">
-            ✂️ Uniformes profissionais para barbearias
-          </div>
+      <section
+        className="flex-1 flex items-center justify-center px-4 py-20 text-center relative overflow-hidden"
+        style={cfg.hero_image ? {
+          backgroundImage: `url(${cfg.hero_image})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        } : undefined}
+      >
+        {cfg.hero_image && (
+          <div className="absolute inset-0 bg-black/60" />
+        )}
+        <div className="max-w-3xl relative z-10">
+          {cfg.hero_badge && (
+            <div className="inline-flex items-center gap-2 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-full px-4 py-1.5 text-sm text-[var(--gold)] font-medium mb-6">
+              {cfg.hero_badge}
+            </div>
+          )}
           <h1 className="text-4xl md:text-6xl font-bold text-[var(--text)] leading-tight mb-5">
-            Equipamentos que refletem o{" "}
-            <span className="text-[var(--gold)]">profissionalismo</span>{" "}
-            da sua barbearia
+            {cfg.hero_title}
           </h1>
           <p className="text-lg text-[var(--text-secondary)] mb-8 max-w-xl mx-auto">
-            Capas, uniformes e aventais personalizados com o logo da sua barbearia.
-            Qualidade premium, entrega em todo o Brasil.
+            {cfg.hero_subtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/produtos">
               <Button size="lg" className="w-full sm:w-auto">
-                Ver produtos
+                {cfg.hero_cta_primary || "Ver produtos"}
               </Button>
             </Link>
             <Link href="/cadastro">
               <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                Criar conta grátis
+                {cfg.hero_cta_secondary || "Criar conta grátis"}
               </Button>
             </Link>
           </div>
@@ -61,7 +87,7 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-[var(--border)] py-6 px-4 text-center text-[var(--text-muted)] text-sm">
-        © {new Date().getFullYear()} Triade Select — Todos os direitos reservados
+        © {new Date().getFullYear()} {cfg.footer_text || "Triade Select — Todos os direitos reservados"}
       </footer>
     </div>
   );

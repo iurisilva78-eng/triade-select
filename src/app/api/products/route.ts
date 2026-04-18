@@ -18,6 +18,9 @@ const productSchema = z.object({
   lengthCm: z.number().positive(),
   allowsCustomization: z.boolean().default(true),
   images: z.array(z.string()).default([]),
+  availableColors: z.array(z.string()).default([]),
+  availableSizes: z.array(z.string()).default([]),
+  availableClosures: z.array(z.string()).default([]),
 });
 
 export async function GET(req: NextRequest) {

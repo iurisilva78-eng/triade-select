@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
-import { LayoutDashboard, Package, ShoppingBag, Users, Factory, Settings } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Users, Factory, Settings, PenSquare } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/producao", label: "Produção", icon: Factory },
   { href: "/admin/produtos", label: "Produtos", icon: Package },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
+  { href: "/admin/conteudo", label: "Conteúdo", icon: PenSquare },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 

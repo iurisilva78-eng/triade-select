@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit2, Trash2, X, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Check, Upload, RefreshCw, ImageIcon } from "lucide-react";
 
 interface Product {
   id: string;
   name: string;
+  slug: string;
   description: string;
   categoryId: string;
   priceBase: number;
@@ -16,6 +17,10 @@ interface Product {
   productionDays: number;
   weightGrams: number;
   active: boolean;
+  images: string[];
+  availableColors: string[];
+  availableSizes: string[];
+  availableClosures: string[];
   category: { name: string };
 }
 
@@ -32,10 +37,14 @@ const emptyForm = {
   priceWithCustom: "",
   productionDays: "15",
   weightGrams: "",
-  heightCm: "",
-  widthCm: "",
-  lengthCm: "",
+  heightCm: "5",
+  widthCm: "20",
+  lengthCm: "30",
   allowsCustomization: true,
+  images: [] as string[],
+  availableColors: "",
+  availableSizes: "",
+  availableClosures: "",
 };
 
 export default function AdminProdutosPage() {
@@ -46,6 +55,8 @@ export default function AdminProdutosPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const load = () => {
     fetch("/api/products")
@@ -84,10 +95,43 @@ export default function AdminProdutosPage() {
       widthCm: "20",
       lengthCm: "30",
       allowsCustomization: true,
+      images: product.images ?? [],
+      availableColors: (product.availableColors ?? []).join(", "),
+      availableSizes: (product.availableSizes ?? []).join(", "),
+      availableClosures: (product.availableClosures ?? []).join(", "),
     });
     setError("");
     setShowForm(true);
   };
+
+  // Upload de imagem para a lista do produto
+  const handleImageUpload = async (file: File) => {
+    setUploadingIdx(-1); // -1 = novo upload em andamento
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setForm((prev) => ({ ...prev, images: [...prev.images, data.url] }));
+      } else {
+        alert(data.error ?? "Erro ao enviar imagem.");
+      }
+    } catch {
+      alert("Erro ao enviar imagem.");
+    }
+    setUploadingIdx(null);
+  };
+
+  const removeImage = (idx: number) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const toArray = (str: string) =>
+    str.split(",").map((s) => s.trim()).filter(Boolean);
 
   const handleSave = async () => {
     setError("");
@@ -105,6 +149,10 @@ export default function AdminProdutosPage() {
       widthCm: parseFloat(form.widthCm),
       lengthCm: parseFloat(form.lengthCm),
       allowsCustomization: form.allowsCustomization,
+      images: form.images,
+      availableColors: toArray(form.availableColors),
+      availableSizes: toArray(form.availableSizes),
+      availableClosures: toArray(form.availableClosures),
     };
 
     const res = await fetch(editing ? `/api/products/${editing.id}` : "/api/products", {
@@ -157,8 +205,19 @@ export default function AdminProdutosPage() {
               {products.map((p) => (
                 <tr key={p.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
                   <td className="px-5 py-3">
-                    <p className="font-medium text-[var(--text)]">{p.name}</p>
-                    <p className="text-xs text-[var(--text-muted)] line-clamp-1">{p.description}</p>
+                    <div className="flex items-center gap-3">
+                      {p.images?.[0] ? (
+                        <img src={p.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-[var(--surface-2)] flex items-center justify-center flex-shrink-0">
+                          <ImageIcon size={16} className="text-[var(--text-muted)]" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-[var(--text)]">{p.name}</p>
+                        <p className="text-xs text-[var(--text-muted)] line-clamp-1">{p.description}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-5 py-3 text-[var(--text-secondary)]">{p.category.name}</td>
                   <td className="px-5 py-3 font-bold text-[var(--gold)]">{formatCurrency(p.priceBase)}</td>
@@ -191,7 +250,7 @@ export default function AdminProdutosPage() {
       {/* Modal form */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-end md:items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-[var(--text)] text-lg">
                 {editing ? "Editar produto" : "Novo produto"}
@@ -201,7 +260,62 @@ export default function AdminProdutosPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
+
+              {/* ── Fotos do produto ── */}
+              <div>
+                <label className="text-sm font-semibold text-[var(--text)] block mb-2">
+                  Fotos do produto
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {form.images.map((url, idx) => (
+                    <div key={idx} className="relative w-24 h-24 group">
+                      <img
+                        src={url}
+                        alt=""
+                        className="w-24 h-24 object-cover rounded-xl border border-[var(--border)]"
+                        onError={(e) => { (e.target as HTMLImageElement).src = ""; }}
+                      />
+                      <button
+                        onClick={() => removeImage(idx)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Botão de upload */}
+                  <label className={`w-24 h-24 rounded-xl border-2 border-dashed border-[var(--border)] flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-[var(--gold)] transition-colors ${uploadingIdx === -1 ? "opacity-50" : ""}`}>
+                    {uploadingIdx === -1 ? (
+                      <RefreshCw size={18} className="animate-spin text-[var(--text-muted)]" />
+                    ) : (
+                      <>
+                        <Upload size={18} className="text-[var(--text-muted)]" />
+                        <span className="text-[10px] text-[var(--text-muted)] text-center leading-tight">
+                          Adicionar<br />foto
+                        </span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingIdx === -1}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-[var(--text-muted)] mt-1.5">
+                  A primeira foto será usada como capa. Em produção configure IMGBB_API_KEY no Netlify.
+                </p>
+              </div>
+
+              {/* ── Informações básicas ── */}
               <Input label="Nome" value={form.name} onChange={f("name")} required />
 
               <div className="flex flex-col gap-1.5">
@@ -240,6 +354,44 @@ export default function AdminProdutosPage() {
                 <Input label="Altura (cm)" type="number" value={form.heightCm} onChange={f("heightCm")} required />
                 <Input label="Largura (cm)" type="number" value={form.widthCm} onChange={f("widthCm")} required />
                 <Input label="Comprimento (cm)" type="number" value={form.lengthCm} onChange={f("lengthCm")} required />
+              </div>
+
+              {/* ── Variações ── */}
+              <div className="border-t border-[var(--border)] pt-4">
+                <p className="text-sm font-semibold text-[var(--text)] mb-3">Variações disponíveis</p>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-[var(--text-secondary)]">Cores</label>
+                    <input
+                      type="text"
+                      placeholder="ex: Preto, Branco, Azul marinho"
+                      value={form.availableColors}
+                      onChange={f("availableColors")}
+                      className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[var(--gold)]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-[var(--text-secondary)]">Tamanhos</label>
+                    <input
+                      type="text"
+                      placeholder="ex: P, M, G, GG"
+                      value={form.availableSizes}
+                      onChange={f("availableSizes")}
+                      className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[var(--gold)]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-[var(--text-secondary)]">Fechamentos</label>
+                    <input
+                      type="text"
+                      placeholder="ex: Botão de pressão, Velcro, Botão comum"
+                      value={form.availableClosures}
+                      onChange={f("availableClosures")}
+                      className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[var(--gold)]"
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">Separe os valores com vírgula. Deixe em branco se não aplicável.</p>
+                </div>
               </div>
 
               {error && (

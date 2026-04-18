@@ -225,6 +225,17 @@ model Notification {
   @@map("notifications")
 }
 
+model SiteConfig {
+  key       String   @id
+  value     String   @db.Text
+  label     String
+  type      String   @default("text")
+  section   String   @default("geral")
+  updatedAt DateTime @updatedAt @default(now())
+
+  @@map("site_config")
+}
+
 model NotificationPhone {
   id        String   @id @default(cuid())
   name      String
