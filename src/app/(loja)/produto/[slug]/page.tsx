@@ -38,11 +38,14 @@ export default function ProdutoPage() {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/products?search=${slug}`)
+    fetch(`/api/products?slug=${slug}`)
       .then((r) => r.json())
       .then((data) => {
-        const p = Array.isArray(data) ? data.find((p: Product) => p.id === slug || p.name.toLowerCase().replace(/\s+/g, "-") === slug) : null;
-        setProduct(p ?? null);
+        setProduct(data && !data.error ? data : null);
+        setLoading(false);
+      })
+      .catch(() => {
+        setProduct(null);
         setLoading(false);
       });
   }, [slug]);

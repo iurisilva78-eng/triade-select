@@ -24,6 +24,18 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category");
   const search = searchParams.get("search");
+  const slug = searchParams.get("slug");
+
+  if (slug) {
+    const product = await prisma.product.findUnique({
+      where: { slug },
+      include: { category: { select: { name: true, slug: true } } },
+    });
+    if (!product || !product.active) {
+      return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+    }
+    return NextResponse.json(product);
+  }
 
   const products = await prisma.product.findMany({
     where: {
