@@ -53,4 +53,7 @@ export interface CartItem {
   logoUrl?: string;
   logoFileName?: string;
   notes?: string;
+  selectedColor?: string;
+  selectedSize?: string;
+  selectedClosure?: string;
 }

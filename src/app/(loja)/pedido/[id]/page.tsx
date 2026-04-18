@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_FLOW } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, Package, Truck, MapPin } from "lucide-react";
+import { Check, Clock, Package, Truck, MapPin, XCircle } from "lucide-react";
 
 interface Order {
   id: string;
@@ -51,6 +51,7 @@ export default function PedidoPage() {
   const { data: session } = useSession();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   useEffect(() => {
     if (session) {
@@ -59,6 +60,17 @@ export default function PedidoPage() {
         .then((data) => { setOrder(data); setLoading(false); });
     }
   }, [id, session]);
+
+  const handleCancelRequest = async () => {
+    if (!order) return;
+    if (!confirm("Deseja solicitar o cancelamento deste pedido? A Triade Select analisará e confirmará em breve.")) return;
+    setCancelLoading(true);
+    const res = await fetch(`/api/orders/${order.id}/cancel-request`, { method: "POST" });
+    const data = await res.json();
+    setCancelLoading(false);
+    if (!res.ok) { alert(data.error ?? "Erro ao solicitar cancelamento."); return; }
+    setOrder((prev) => prev ? { ...prev, cancelRequestedAt: new Date().toISOString() } as any : prev);
+  };
 
   if (loading) {
     return (
@@ -204,6 +216,38 @@ export default function PedidoPage() {
           ))}
         </div>
       </div>
+
+      {/* Cancelamento */}
+      {["RECEBIDO", "ACEITO"].includes(order.status) && (
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
+          {(order as any).cancelRequestedAt ? (
+            <div className="flex items-start gap-3">
+              <XCircle size={18} className="text-amber-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-400 text-sm">Cancelamento solicitado</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Sua solicitação foi recebida. A equipe analisará e entrará em contato.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-[var(--text)] text-sm">Precisa cancelar?</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">Disponível antes de entrar em produção.</p>
+              </div>
+              <button
+                onClick={handleCancelRequest}
+                disabled={cancelLoading}
+                className="flex items-center gap-2 px-4 py-2 border border-red-500/40 text-red-400 text-sm font-medium rounded-xl hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              >
+                <XCircle size={14} />
+                {cancelLoading ? "Solicitando..." : "Solicitar cancelamento"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Endereço */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">

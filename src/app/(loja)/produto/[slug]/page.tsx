@@ -9,6 +9,7 @@ import { ShoppingCart, Upload, X, Clock, Package } from "lucide-react";
 
 interface Product {
   id: string;
+  slug: string;
   name: string;
   description: string;
   priceBase: number;
@@ -20,7 +21,10 @@ interface Product {
   heightCm: number;
   widthCm: number;
   lengthCm: number;
-  category: { name: string };
+  availableColors: string[];
+  availableSizes: string[];
+  availableClosures: string[];
+  category: { name: string; slug: string };
 }
 
 export default function ProdutoPage() {
@@ -36,18 +40,25 @@ export default function ProdutoPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [adding, setAdding] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedClosure, setSelectedClosure] = useState<string>("");
 
   useEffect(() => {
     fetch(`/api/products?slug=${slug}`)
       .then((r) => r.json())
       .then((data) => {
-        setProduct(data && !data.error ? data : null);
+        if (data && !data.error) {
+          setProduct(data);
+          if (data.availableColors?.length) setSelectedColor(data.availableColors[0]);
+          if (data.availableSizes?.length) setSelectedSize(data.availableSizes[0]);
+          if (data.availableClosures?.length) setSelectedClosure(data.availableClosures[0]);
+        } else {
+          setProduct(null);
+        }
         setLoading(false);
       })
-      .catch(() => {
-        setProduct(null);
-        setLoading(false);
-      });
+      .catch(() => { setProduct(null); setLoading(false); });
   }, [slug]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +119,9 @@ export default function ProdutoPage() {
       logoUrl: logoUrl || undefined,
       logoFileName: logoFile?.name,
       notes: notes || undefined,
+      selectedColor: selectedColor || undefined,
+      selectedSize: selectedSize || undefined,
+      selectedClosure: selectedClosure || undefined,
     });
 
     setAdding(false);
@@ -136,12 +150,38 @@ export default function ProdutoPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="grid md:grid-cols-2 gap-10">
-        {/* Imagem */}
-        <div className="aspect-square bg-[var(--surface)] rounded-2xl flex items-center justify-center text-8xl border border-[var(--border)] overflow-hidden">
+        {/* Imagem / Mockup */}
+        <div className="aspect-square bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative">
           {product.images[0] ? (
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+          ) : hasCustomization && (logoPreview || logoFile) ? (
+            /* Mockup visual da capa com logo */
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#141414] p-6 gap-2">
+              <p className="text-xs text-[var(--text-muted)] mb-2">Prévia aproximada</p>
+              <div className="relative w-48 h-56">
+                {/* Corpo da capa */}
+                <div className="absolute inset-x-0 bottom-0 top-10 rounded-b-3xl border border-[var(--border)]"
+                  style={{ backgroundColor: selectedColor ? undefined : "#2a2a2a", background: selectedColor ? `${selectedColor}33` : undefined, borderColor: selectedColor || undefined }} />
+                {/* Gola */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-12 bg-[#111] rounded-b-2xl border-x border-b border-[var(--border)]" />
+                {/* Logo na área do peito */}
+                <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-20 h-20 flex items-center justify-center">
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain drop-shadow-lg" />
+                  ) : logoFile?.name?.endsWith(".pdf") ? (
+                    <div className="text-3xl">📄</div>
+                  ) : null}
+                </div>
+              </div>
+              {selectedColor && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: selectedColor }} />
+                  <span className="text-xs text-[var(--text-muted)]">Cor selecionada</span>
+                </div>
+              )}
+            </div>
           ) : (
-            "🧣"
+            <div className="w-full h-full flex items-center justify-center text-8xl bg-[#141414]">🧣</div>
           )}
         </div>
 
@@ -166,6 +206,57 @@ export default function ProdutoPage() {
               {(product.weightGrams / 1000).toFixed(2)} kg
             </div>
           </div>
+
+          {/* Seletores de variantes */}
+          {product.availableColors?.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-[var(--text)] mb-2">Cor</p>
+              <div className="flex flex-wrap gap-2">
+                {product.availableColors.map((color) => (
+                  <button key={color} onClick={() => setSelectedColor(color)}
+                    title={color}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === color ? "border-[var(--gold)] scale-110" : "border-transparent hover:border-white/40"}`}
+                    style={{ backgroundColor: color }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {product.availableSizes?.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-[var(--text)] mb-2">Tamanho</p>
+              <div className="flex flex-wrap gap-2">
+                {product.availableSizes.map((size) => (
+                  <button key={size} onClick={() => setSelectedSize(size)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                      selectedSize === size
+                        ? "bg-[var(--gold)] text-black border-[var(--gold)]"
+                        : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"
+                    }`}>
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {product.availableClosures?.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-[var(--text)] mb-2">Fechamento</p>
+              <div className="flex flex-wrap gap-2">
+                {product.availableClosures.map((closure) => (
+                  <button key={closure} onClick={() => setSelectedClosure(closure)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                      selectedClosure === closure
+                        ? "bg-[var(--gold)] text-black border-[var(--gold)]"
+                        : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"
+                    }`}>
+                    {closure}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Personalização */}
           {product.allowsCustomization && (

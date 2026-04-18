@@ -3,8 +3,8 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
-import { generateOrderNumber } from "@/lib/utils";
-import { notifyOrderCreated } from "@/lib/whatsapp";
+import { generateOrderNumber, formatCurrency } from "@/lib/utils";
+import { notifyOrderCreated, sendWhatsAppMessage } from "@/lib/whatsapp";
 
 const orderSchema = z.object({
   items: z.array(
@@ -15,6 +15,9 @@ const orderSchema = z.object({
       logoUrl: z.string().optional(),
       logoFileName: z.string().optional(),
       notes: z.string().optional(),
+      selectedColor: z.string().optional(),
+      selectedSize: z.string().optional(),
+      selectedClosure: z.string().optional(),
     })
   ).min(1),
   cep: z.string().min(8),
@@ -31,9 +34,7 @@ const orderSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
 
   const user = session.user as any;
   const { searchParams } = new URL(req.url);
@@ -58,16 +59,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Faça login para realizar um pedido." }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Faça login para realizar um pedido." }, { status: 401 });
 
   try {
     const body = await req.json();
     const data = orderSchema.parse(body);
     const user = session.user as any;
 
-    // Busca todos os produtos do pedido
     const products = await prisma.product.findMany({
       where: { id: { in: data.items.map((i) => i.productId) }, active: true },
     });
@@ -76,13 +74,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Um ou mais produtos não encontrados." }, { status: 400 });
     }
 
-    // Calcula subtotal
     let subtotal = 0;
     const itemsData = data.items.map((item) => {
       const product = products.find((p) => p.id === item.productId)!;
-      const unitPrice = item.hasCustomization
-        ? product.priceWithCustom
-        : product.priceBase;
+      const unitPrice = item.hasCustomization ? product.priceWithCustom : product.priceBase;
       subtotal += unitPrice * item.quantity;
       return { ...item, unitPrice };
     });
@@ -118,6 +113,9 @@ export async function POST(req: NextRequest) {
             logoUrl: item.logoUrl,
             logoFileName: item.logoFileName,
             notes: item.notes,
+            selectedColor: item.selectedColor,
+            selectedSize: item.selectedSize,
+            selectedClosure: item.selectedClosure,
           })),
         },
         statusHistory: {
@@ -129,12 +127,29 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Envia WhatsApp assíncrono (não bloqueia resposta)
+    // Notifica cliente via WhatsApp
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
     if (dbUser?.phone) {
-      notifyOrderCreated(dbUser.phone, dbUser.name, orderNumber, total).catch(
-        console.error
-      );
+      notifyOrderCreated(dbUser.phone, dbUser.name, orderNumber, total).catch(console.error);
+    }
+
+    // Notifica todos os telefones admin cadastrados
+    const adminPhones = await prisma.notificationPhone.findMany({ where: { active: true } });
+    if (adminPhones.length > 0) {
+      const itemsList = order.items.map((i) => `${i.product.name} ×${i.quantity}`).join(", ");
+      const adminMsg =
+        `🛍 *Novo Pedido #${orderNumber}*\n\n` +
+        `👤 *Cliente:* ${dbUser?.name ?? "—"}\n` +
+        `📱 *WhatsApp:* ${dbUser?.phone ?? "não informado"}\n` +
+        `📦 *Itens:* ${itemsList}\n` +
+        `💰 *Total:* ${formatCurrency(total)}\n` +
+        `📍 *Cidade:* ${data.city}/${data.state}\n\n` +
+        `Acesse o painel admin para gerenciar.\n` +
+        `— *Triade Select*`;
+
+      for (const ap of adminPhones) {
+        sendWhatsAppMessage(ap.phone, adminMsg).catch(console.error);
+      }
     }
 
     return NextResponse.json(order, { status: 201 });
