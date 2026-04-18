@@ -82,6 +82,7 @@ export async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   const apiUrl = process.env.WHATSAPP_API_URL;
+  const clientToken = process.env.WHATSAPP_CLIENT_TOKEN;
   if (!apiUrl) {
     console.warn("WHATSAPP_API_URL não configurado");
     return false;
@@ -91,7 +92,10 @@ export async function sendWhatsAppMessage(
     const formattedPhone = formatPhone(phone);
     const res = await fetch(apiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(clientToken ? { "Client-Token": clientToken } : {}),
+      },
       body: JSON.stringify({
         phone: formattedPhone,
         message,
