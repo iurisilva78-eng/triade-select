@@ -18,7 +18,7 @@ const MOCKUP_CONFIG: Record<string, { image: string; zones: LogoZone[] }> = {
   capa: {
     image: "/mockups/capa.png",
     zones: [
-      { top: "28%", left: "50%", size: "25%", label: "Peito" },
+      { top: "28%", left: "50%", size: "30%", label: "Peito" },
     ],
   },
   camiseta: {
