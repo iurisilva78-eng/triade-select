@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Bell, BellOff, Save, Check, Users } from "lucide-react";
+import { Plus, Trash2, Bell, BellOff, Save, Check, Users, RefreshCw, ChevronDown } from "lucide-react";
 
 interface NotifPhone {
   id: string;
@@ -23,6 +23,10 @@ export default function ConfiguracoesPage() {
   const [groupId, setGroupId] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
   const [savedGroup, setSavedGroup] = useState(false);
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupsError, setGroupsError] = useState("");
+  const [showGroupList, setShowGroupList] = useState(false);
 
   const load = () => {
     fetch("/api/admin/notification-phones")
@@ -72,6 +76,21 @@ export default function ConfiguracoesPage() {
     load();
   };
 
+  const handleFetchGroups = async () => {
+    setLoadingGroups(true);
+    setGroupsError("");
+    setShowGroupList(false);
+    try {
+      const res = await fetch("/api/admin/whatsapp-groups");
+      const data = await res.json();
+      if (!res.ok) { setGroupsError(data.error ?? "Erro ao buscar grupos."); }
+      else { setGroups(data); setShowGroupList(true); }
+    } catch {
+      setGroupsError("Erro ao buscar grupos.");
+    }
+    setLoadingGroups(false);
+  };
+
   const handleSaveGroup = async () => {
     setSavingGroup(true);
     await fetch("/api/admin/site-config", {
@@ -99,28 +118,53 @@ export default function ConfiguracoesPage() {
           Quando configurado, cada novo pedido (e a logo do cliente, se houver) será enviado neste grupo do WhatsApp.
         </p>
 
+        {/* Buscar grupos automaticamente */}
+        <div className="mb-3">
+          <button
+            onClick={handleFetchGroups}
+            disabled={loadingGroups}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors disabled:opacity-50"
+          >
+            {loadingGroups ? <RefreshCw size={14} className="animate-spin" /> : <ChevronDown size={14} />}
+            Buscar meus grupos do WhatsApp
+          </button>
+          {groupsError && <p className="text-red-400 text-xs mt-2">{groupsError}</p>}
+        </div>
+
+        {/* Lista de grupos */}
+        {showGroupList && groups.length > 0 && (
+          <div className="mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => { setGroupId(g.id); setShowGroupList(false); }}
+                className={`w-full text-left px-4 py-3 text-sm hover:bg-[var(--gold)]/10 transition-colors border-b border-[var(--border)] last:border-0 ${groupId === g.id ? "text-[var(--gold)] bg-[var(--gold)]/5" : "text-[var(--text-secondary)]"}`}
+              >
+                <span className="font-medium">{g.name}</span>
+                <span className="block text-xs font-mono text-[var(--text-muted)] mt-0.5">{g.id}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showGroupList && groups.length === 0 && (
+          <p className="text-sm text-[var(--text-muted)] mb-3">Nenhum grupo encontrado. Verifique se o WhatsApp está conectado.</p>
+        )}
+
         <div className="flex gap-3 items-end">
           <div className="flex-1">
-            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">ID do grupo Z-API</label>
+            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">ID do grupo selecionado</label>
             <input
               type="text"
-              placeholder="Ex: 120363XXXXXXXXXXXXXXXXX"
+              placeholder="Clique em 'Buscar grupos' acima ou cole o ID manualmente"
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
               className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] font-mono placeholder:text-[var(--text-muted)]"
             />
           </div>
-          <Button onClick={handleSaveGroup} loading={savingGroup} className="flex items-center gap-2 shrink-0">
+          <Button onClick={handleSaveGroup} loading={savingGroup} disabled={!groupId} className="flex items-center gap-2 shrink-0">
             {savedGroup ? <><Check size={14} /> Salvo!</> : <><Save size={14} /> Salvar</>}
           </Button>
-        </div>
-
-        <div className="mt-4 bg-[var(--surface-2)] rounded-xl p-4 text-xs text-[var(--text-muted)] space-y-1.5">
-          <p className="font-semibold text-[var(--text-secondary)]">Como encontrar o ID do grupo:</p>
-          <p>1. Acesse o painel da Z-API: <span className="font-mono text-[var(--gold)]">app.z-api.io</span></p>
-          <p>2. Vá em <strong>API → Chats</strong> e use o endpoint <span className="font-mono">GET /chats</span></p>
-          <p>3. Encontre seu grupo na lista e copie o campo <span className="font-mono">phone</span> (começa com 120363...)</p>
-          <p>4. Cole o ID acima e salve.</p>
         </div>
       </div>
 
