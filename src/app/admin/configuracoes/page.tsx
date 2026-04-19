@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Bell, BellOff, Save, Check, Users, RefreshCw, ChevronDown } from "lucide-react";
+import {
+  Plus, Trash2, Bell, BellOff, Save, Check,
+  Users, RefreshCw, ChevronDown, Wifi, WifiOff, Send, Eye, EyeOff,
+} from "lucide-react";
 
 interface NotifPhone {
   id: string;
@@ -18,6 +21,18 @@ export default function ConfiguracoesPage() {
   const [phone, setPhone] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+
+  // WhatsApp API config
+  const [apiUrl, setApiUrl] = useState("");
+  const [clientToken, setClientToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
+  const [savingApi, setSavingApi] = useState(false);
+  const [savedApi, setSavedApi] = useState(false);
+
+  // Teste de conexão
+  const [testPhone, setTestPhone] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Grupo WhatsApp
   const [groupId, setGroupId] = useState("");
@@ -36,15 +51,51 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     load();
-    // Carrega ID do grupo salvo
     fetch("/api/admin/site-config")
       .then((r) => r.json())
       .then((data: any[]) => {
         const g = data.find((d) => d.key === "whatsapp_group_id");
         if (g?.value) setGroupId(g.value);
+        const u = data.find((d) => d.key === "whatsapp_api_url");
+        if (u?.value) setApiUrl(u.value);
+        const t = data.find((d) => d.key === "whatsapp_client_token");
+        if (t?.value) setClientToken(t.value);
       })
       .catch(() => {});
   }, []);
+
+  const handleSaveApi = async () => {
+    setSavingApi(true);
+    setSavedApi(false);
+    await fetch("/api/admin/site-config", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([
+        { key: "whatsapp_api_url", value: apiUrl.trim() },
+        { key: "whatsapp_client_token", value: clientToken.trim() },
+      ]),
+    });
+    setSavingApi(false);
+    setSavedApi(true);
+    setTimeout(() => setSavedApi(false), 3000);
+  };
+
+  const handleTest = async () => {
+    if (!testPhone.trim()) return;
+    setTesting(true);
+    setTestResult(null);
+    const res = await fetch("/api/admin/whatsapp-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: testPhone.trim() }),
+    });
+    const data = await res.json();
+    setTesting(false);
+    setTestResult(res.ok
+      ? { ok: true, msg: "Mensagem enviada! Verifique o WhatsApp." }
+      : { ok: false, msg: data.error ?? "Falha ao enviar." }
+    );
+  };
 
   const handleAdd = async () => {
     if (!name.trim() || !phone.trim()) { setError("Preencha nome e telefone."); return; }
@@ -108,6 +159,98 @@ export default function ConfiguracoesPage() {
       <h1 className="text-2xl font-bold text-[var(--text)] mb-2">Configurações</h1>
       <p className="text-[var(--text-muted)] text-sm mb-8">Notificações e integrações de WhatsApp.</p>
 
+      {/* ── Configuração da API WhatsApp ── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Wifi size={16} className="text-[var(--gold)]" />
+          <h2 className="font-bold text-[var(--text)]">Conexão WhatsApp (Z-API)</h2>
+        </div>
+        <p className="text-sm text-[var(--text-muted)] mb-5">
+          Configure a URL da API e o token de autenticação. Estas credenciais ficam salvas no banco de dados.
+        </p>
+
+        <div className="space-y-4 mb-5">
+          <div>
+            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">
+              URL da API (send-text)
+            </label>
+            <input
+              type="text"
+              placeholder="https://api.z-api.io/instances/INSTANCIA/token/TOKEN/send-text"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] font-mono placeholder:text-[var(--text-muted)]"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">
+              Client-Token
+            </label>
+            <div className="relative">
+              <input
+                type={showToken ? "text" : "password"}
+                placeholder="Fabed6a7b3..."
+                value={clientToken}
+                onChange={(e) => setClientToken(e.target.value)}
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] font-mono placeholder:text-[var(--text-muted)] pr-12"
+              />
+              <button
+                onClick={() => setShowToken(!showToken)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)]"
+              >
+                {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={handleSaveApi} loading={savingApi} className="flex items-center gap-2">
+            {savedApi ? <><Check size={14} /> Salvo!</> : <><Save size={14} /> Salvar credenciais</>}
+          </Button>
+        </div>
+
+        {/* Testar conexão */}
+        <div className="mt-5 pt-5 border-t border-[var(--border)]">
+          <p className="text-sm font-medium text-[var(--text)] mb-3">Testar conexão</p>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">
+                Enviar mensagem de teste para (com DDD)
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: 11999999999"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, ""))}
+                maxLength={13}
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+            <Button
+              onClick={handleTest}
+              loading={testing}
+              disabled={!testPhone.trim()}
+              className="flex items-center gap-2 shrink-0"
+            >
+              <Send size={14} /> Enviar teste
+            </Button>
+          </div>
+
+          {testResult && (
+            <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-3 rounded-xl border ${
+              testResult.ok
+                ? "bg-green-500/10 border-green-500/30 text-green-400"
+                : "bg-red-500/10 border-red-500/30 text-red-400"
+            }`}>
+              {testResult.ok ? <Wifi size={14} /> : <WifiOff size={14} />}
+              {testResult.msg}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Grupo de novos pedidos ── */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
         <div className="flex items-center gap-2 mb-1">
@@ -115,10 +258,9 @@ export default function ConfiguracoesPage() {
           <h2 className="font-bold text-[var(--text)]">Grupo de novos pedidos</h2>
         </div>
         <p className="text-sm text-[var(--text-muted)] mb-4">
-          Quando configurado, cada novo pedido (e a logo do cliente, se houver) será enviado neste grupo do WhatsApp.
+          Cada novo pedido (e a logo do cliente, se houver) será enviado neste grupo do WhatsApp.
         </p>
 
-        {/* Buscar grupos automaticamente */}
         <div className="mb-3">
           <button
             onClick={handleFetchGroups}
@@ -131,7 +273,6 @@ export default function ConfiguracoesPage() {
           {groupsError && <p className="text-red-400 text-xs mt-2">{groupsError}</p>}
         </div>
 
-        {/* Lista de grupos */}
         {showGroupList && groups.length > 0 && (
           <div className="mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl overflow-hidden max-h-48 overflow-y-auto">
             {groups.map((g) => (
@@ -153,10 +294,10 @@ export default function ConfiguracoesPage() {
 
         <div className="flex gap-3 items-end">
           <div className="flex-1">
-            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">ID do grupo selecionado</label>
+            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">ID do grupo</label>
             <input
               type="text"
-              placeholder="Clique em 'Buscar grupos' acima ou cole o ID manualmente"
+              placeholder="Clique em 'Buscar grupos' ou cole o ID manualmente"
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
               className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] font-mono placeholder:text-[var(--text-muted)]"

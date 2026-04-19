@@ -1,6 +1,7 @@
 import { OrderStatus } from "@prisma/client";
 import { ORDER_STATUS_LABELS } from "@/types";
 import { formatCurrency, formatPhone } from "./utils";
+import { prisma } from "./prisma";
 
 const STATUS_EMOJI: Record<OrderStatus, string> = {
   RECEBIDO: "📋",
@@ -10,6 +11,30 @@ const STATUS_EMOJI: Record<OrderStatus, string> = {
   ENTREGUE: "🎉",
   CANCELADO: "❌",
 };
+
+/** Lê config do WhatsApp — env vars têm prioridade, senão lê do banco */
+async function getWhatsAppConfig(): Promise<{ apiUrl: string; clientToken: string }> {
+  const envUrl = process.env.WHATSAPP_API_URL?.trim();
+  const envToken = process.env.WHATSAPP_CLIENT_TOKEN?.trim();
+
+  if (envUrl) {
+    return { apiUrl: envUrl, clientToken: envToken ?? "" };
+  }
+
+  // Fallback: lê do SiteConfig (configurado pelo painel admin)
+  try {
+    const [urlRow, tokenRow] = await Promise.all([
+      prisma.siteConfig.findUnique({ where: { key: "whatsapp_api_url" } }),
+      prisma.siteConfig.findUnique({ where: { key: "whatsapp_client_token" } }),
+    ]);
+    return {
+      apiUrl: urlRow?.value?.trim() ?? "",
+      clientToken: tokenRow?.value?.trim() ?? "",
+    };
+  } catch {
+    return { apiUrl: "", clientToken: "" };
+  }
+}
 
 function buildMessage(
   type: "new_order" | "status_update" | "shipped" | "delivered",
@@ -44,9 +69,7 @@ function buildMessage(
       `Olá, *${customerName}*! ${emoji}\n\n` +
       `Atualização do seu pedido *#${orderNumber}*:\n\n` +
       `*Status atual:* ${label}\n\n` +
-      (status === "EM_PRODUCAO"
-        ? `Sua encomenda já está sendo produzida com carinho! 🧵\n\n`
-        : "") +
+      (status === "EM_PRODUCAO" ? `Sua encomenda já está sendo produzida com carinho! 🧵\n\n` : "") +
       `Acompanhe pelo nosso sistema.\n` +
       `— *Triade Select*`
     );
@@ -77,21 +100,15 @@ function buildMessage(
   return "";
 }
 
-function getApiBase(): string {
-  const url = process.env.WHATSAPP_API_URL ?? "";
-  // Remove o endpoint final (ex: /send-text) para obter a base
-  return url.replace(/\/[^/]+$/, "");
-}
-
 export async function sendWhatsAppMessage(
   phone: string,
   message: string,
-  options?: { raw?: boolean } // raw=true pula o formatPhone (para IDs de grupo)
+  options?: { raw?: boolean }
 ): Promise<boolean> {
-  const apiUrl = process.env.WHATSAPP_API_URL;
-  const clientToken = process.env.WHATSAPP_CLIENT_TOKEN;
+  const { apiUrl, clientToken } = await getWhatsAppConfig();
+
   if (!apiUrl) {
-    console.warn("WHATSAPP_API_URL não configurado");
+    console.warn("[WhatsApp] API URL não configurada. Configure em Admin → Configurações.");
     return false;
   }
 
@@ -105,14 +122,19 @@ export async function sendWhatsAppMessage(
       },
       body: JSON.stringify({ phone: formattedPhone, message }),
     });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[WhatsApp] Erro ${res.status}:`, body);
+    }
+
     return res.ok;
   } catch (err) {
-    console.error("Erro ao enviar WhatsApp:", err);
+    console.error("[WhatsApp] Erro ao enviar mensagem:", err);
     return false;
   }
 }
 
-// Envia mensagem de texto para um grupo do Z-API
 export async function sendWhatsAppGroupMessage(
   groupId: string,
   message: string
@@ -120,20 +142,20 @@ export async function sendWhatsAppGroupMessage(
   return sendWhatsAppMessage(groupId, message, { raw: true });
 }
 
-// Envia imagem com legenda (usado para preview da logo)
 export async function sendWhatsAppImageMessage(
   phone: string,
   imageUrl: string,
   caption: string,
   options?: { raw?: boolean }
 ): Promise<boolean> {
-  const clientToken = process.env.WHATSAPP_CLIENT_TOKEN;
-  const base = getApiBase();
-  if (!base) {
-    console.warn("WHATSAPP_API_URL não configurado");
+  const { apiUrl, clientToken } = await getWhatsAppConfig();
+
+  if (!apiUrl) {
+    console.warn("[WhatsApp] API URL não configurada.");
     return false;
   }
 
+  const base = apiUrl.replace(/\/[^/]+$/, "");
   const imageEndpoint = `${base}/send-image`;
   const formattedPhone = options?.raw ? phone : formatPhone(phone);
 
@@ -146,9 +168,15 @@ export async function sendWhatsAppImageMessage(
       },
       body: JSON.stringify({ phone: formattedPhone, image: imageUrl, caption }),
     });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[WhatsApp] Erro imagem ${res.status}:`, body);
+    }
+
     return res.ok;
   } catch (err) {
-    console.error("Erro ao enviar imagem WhatsApp:", err);
+    console.error("[WhatsApp] Erro ao enviar imagem:", err);
     return false;
   }
 }
@@ -174,11 +202,7 @@ export async function notifyStatusUpdate(
   orderNumber: string,
   status: OrderStatus
 ) {
-  const message = buildMessage("status_update", {
-    customerName,
-    orderNumber,
-    status,
-  });
+  const message = buildMessage("status_update", { customerName, orderNumber, status });
   return sendWhatsAppMessage(phone, message);
 }
 
@@ -188,11 +212,7 @@ export async function notifyShipped(
   orderNumber: string,
   trackingCode: string
 ) {
-  const message = buildMessage("shipped", {
-    customerName,
-    orderNumber,
-    trackingCode,
-  });
+  const message = buildMessage("shipped", { customerName, orderNumber, trackingCode });
   return sendWhatsAppMessage(phone, message);
 }
 
