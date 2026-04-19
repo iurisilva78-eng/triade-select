@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Scissors, Clock, Truck, Shield } from "lucide-react";
-import { DEFAULT_CONFIG } from "@/app/api/admin/site-config/route";
+import { DEFAULT_SITE_CONFIG } from "@/lib/site-config-defaults";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +13,9 @@ async function getSiteConfig(): Promise<Record<string, string>> {
   try {
     const saved = await prisma.siteConfig.findMany();
     const savedMap = Object.fromEntries(saved.map((c) => [c.key, c.value]));
-    return Object.fromEntries(DEFAULT_CONFIG.map((d) => [d.key, savedMap[d.key] ?? d.value]));
+    return Object.fromEntries(DEFAULT_SITE_CONFIG.map((d) => [d.key, savedMap[d.key] ?? d.value]));
   } catch {
-    return Object.fromEntries(DEFAULT_CONFIG.map((d) => [d.key, d.value]));
+    return Object.fromEntries(DEFAULT_SITE_CONFIG.map((d) => [d.key, d.value]));
   }
 }
 
