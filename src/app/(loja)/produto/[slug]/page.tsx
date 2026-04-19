@@ -183,7 +183,7 @@ export default function ProdutoPage() {
             /* Mockup base sem logo */
             <div className="w-full h-full relative bg-[#111]">
               <img
-                src={`/mockups/${product.mockupType ?? "capa"}.jpg`}
+                src={`/mockups/${product.mockupType ?? "capa"}.png`}
                 alt={product.name}
                 className="w-full h-full object-contain opacity-80"
                 onError={(e) => {

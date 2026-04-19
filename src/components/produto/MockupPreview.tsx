@@ -16,19 +16,19 @@ interface LogoZone {
 
 const MOCKUP_CONFIG: Record<string, { image: string; zones: LogoZone[] }> = {
   capa: {
-    image: "/mockups/capa.jpg",
+    image: "/mockups/capa.png",
     zones: [
       { top: "38%", left: "50%", size: "18%", label: "Peito" },
     ],
   },
   camiseta: {
-    image: "/mockups/camiseta.jpg",
+    image: "/mockups/camiseta.png",
     zones: [
       { top: "30%", left: "60%", size: "13%", label: "Peito" },
     ],
   },
   "camiseta-dupla": {
-    image: "/mockups/camiseta-dupla.jpg",
+    image: "/mockups/camiseta-dupla.png",
     zones: [
       { top: "30%", left: "24%", size: "9%",  label: "Peito" },
       { top: "28%", left: "74%", size: "14%", label: "Costas" },

@@ -349,7 +349,7 @@ export default function AdminProdutosPage() {
                       }`}
                     >
                       <img
-                        src={`/mockups/${opt.value}.jpg`}
+                        src={`/mockups/${opt.value}.png`}
                         alt={opt.label}
                         className="w-16 h-16 object-contain rounded-lg bg-[var(--surface-2)]"
                         onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
