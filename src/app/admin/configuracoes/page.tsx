@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Bell, BellOff } from "lucide-react";
+import { Plus, Trash2, Bell, BellOff, Save, Check, Users } from "lucide-react";
 
 interface NotifPhone {
   id: string;
@@ -19,13 +19,28 @@ export default function ConfiguracoesPage() {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
+  // Grupo WhatsApp
+  const [groupId, setGroupId] = useState("");
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [savedGroup, setSavedGroup] = useState(false);
+
   const load = () => {
     fetch("/api/admin/notification-phones")
       .then((r) => r.json())
       .then((d) => { setPhones(d); setLoading(false); });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Carrega ID do grupo salvo
+    fetch("/api/admin/site-config")
+      .then((r) => r.json())
+      .then((data: any[]) => {
+        const g = data.find((d) => d.key === "whatsapp_group_id");
+        if (g?.value) setGroupId(g.value);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleAdd = async () => {
     if (!name.trim() || !phone.trim()) { setError("Preencha nome e telefone."); return; }
@@ -57,14 +72,62 @@ export default function ConfiguracoesPage() {
     load();
   };
 
+  const handleSaveGroup = async () => {
+    setSavingGroup(true);
+    await fetch("/api/admin/site-config", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ key: "whatsapp_group_id", value: groupId.trim() }]),
+    });
+    setSavingGroup(false);
+    setSavedGroup(true);
+    setTimeout(() => setSavedGroup(false), 3000);
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-[var(--text)] mb-2">Configurações</h1>
-      <p className="text-[var(--text-muted)] text-sm mb-8">Telefones que receberão notificações de novos pedidos.</p>
+      <p className="text-[var(--text-muted)] text-sm mb-8">Notificações e integrações de WhatsApp.</p>
 
-      {/* Adicionar novo */}
+      {/* ── Grupo de novos pedidos ── */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
-        <h2 className="font-bold text-[var(--text)] mb-4">Adicionar telefone</h2>
+        <div className="flex items-center gap-2 mb-1">
+          <Users size={16} className="text-[var(--gold)]" />
+          <h2 className="font-bold text-[var(--text)]">Grupo de novos pedidos</h2>
+        </div>
+        <p className="text-sm text-[var(--text-muted)] mb-4">
+          Quando configurado, cada novo pedido (e a logo do cliente, se houver) será enviado neste grupo do WhatsApp.
+        </p>
+
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">ID do grupo Z-API</label>
+            <input
+              type="text"
+              placeholder="Ex: 120363XXXXXXXXXXXXXXXXX"
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] font-mono placeholder:text-[var(--text-muted)]"
+            />
+          </div>
+          <Button onClick={handleSaveGroup} loading={savingGroup} className="flex items-center gap-2 shrink-0">
+            {savedGroup ? <><Check size={14} /> Salvo!</> : <><Save size={14} /> Salvar</>}
+          </Button>
+        </div>
+
+        <div className="mt-4 bg-[var(--surface-2)] rounded-xl p-4 text-xs text-[var(--text-muted)] space-y-1.5">
+          <p className="font-semibold text-[var(--text-secondary)]">Como encontrar o ID do grupo:</p>
+          <p>1. Acesse o painel da Z-API: <span className="font-mono text-[var(--gold)]">app.z-api.io</span></p>
+          <p>2. Vá em <strong>API → Chats</strong> e use o endpoint <span className="font-mono">GET /chats</span></p>
+          <p>3. Encontre seu grupo na lista e copie o campo <span className="font-mono">phone</span> (começa com 120363...)</p>
+          <p>4. Cole o ID acima e salve.</p>
+        </div>
+      </div>
+
+      {/* ── Telefones individuais ── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
+        <h2 className="font-bold text-[var(--text)] mb-1">Adicionar telefone individual</h2>
+        <p className="text-sm text-[var(--text-muted)] mb-4">Além do grupo, esses números também receberão notificações de novos pedidos.</p>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Nome</label>
@@ -94,12 +157,9 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
         {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-        <p className="text-xs text-[var(--text-muted)] mt-3">
-          Esses números receberão uma mensagem no WhatsApp a cada novo pedido feito na loja.
-        </p>
       </div>
 
-      {/* Lista */}
+      {/* ── Lista de telefones ── */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--border)]">
           <h2 className="font-bold text-[var(--text)]">Telefones cadastrados</h2>

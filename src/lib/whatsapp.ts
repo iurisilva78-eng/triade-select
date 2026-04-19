@@ -77,9 +77,16 @@ function buildMessage(
   return "";
 }
 
+function getApiBase(): string {
+  const url = process.env.WHATSAPP_API_URL ?? "";
+  // Remove o endpoint final (ex: /send-text) para obter a base
+  return url.replace(/\/[^/]+$/, "");
+}
+
 export async function sendWhatsAppMessage(
   phone: string,
-  message: string
+  message: string,
+  options?: { raw?: boolean } // raw=true pula o formatPhone (para IDs de grupo)
 ): Promise<boolean> {
   const apiUrl = process.env.WHATSAPP_API_URL;
   const clientToken = process.env.WHATSAPP_CLIENT_TOKEN;
@@ -89,21 +96,59 @@ export async function sendWhatsAppMessage(
   }
 
   try {
-    const formattedPhone = formatPhone(phone);
+    const formattedPhone = options?.raw ? phone : formatPhone(phone);
     const res = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(clientToken ? { "Client-Token": clientToken } : {}),
       },
-      body: JSON.stringify({
-        phone: formattedPhone,
-        message,
-      }),
+      body: JSON.stringify({ phone: formattedPhone, message }),
     });
     return res.ok;
   } catch (err) {
     console.error("Erro ao enviar WhatsApp:", err);
+    return false;
+  }
+}
+
+// Envia mensagem de texto para um grupo do Z-API
+export async function sendWhatsAppGroupMessage(
+  groupId: string,
+  message: string
+): Promise<boolean> {
+  return sendWhatsAppMessage(groupId, message, { raw: true });
+}
+
+// Envia imagem com legenda (usado para preview da logo)
+export async function sendWhatsAppImageMessage(
+  phone: string,
+  imageUrl: string,
+  caption: string,
+  options?: { raw?: boolean }
+): Promise<boolean> {
+  const clientToken = process.env.WHATSAPP_CLIENT_TOKEN;
+  const base = getApiBase();
+  if (!base) {
+    console.warn("WHATSAPP_API_URL não configurado");
+    return false;
+  }
+
+  const imageEndpoint = `${base}/send-image`;
+  const formattedPhone = options?.raw ? phone : formatPhone(phone);
+
+  try {
+    const res = await fetch(imageEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(clientToken ? { "Client-Token": clientToken } : {}),
+      },
+      body: JSON.stringify({ phone: formattedPhone, image: imageUrl, caption }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Erro ao enviar imagem WhatsApp:", err);
     return false;
   }
 }

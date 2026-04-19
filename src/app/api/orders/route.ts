@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { generateOrderNumber, formatCurrency } from "@/lib/utils";
-import { notifyOrderCreated, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { notifyOrderCreated, sendWhatsAppGroupMessage, sendWhatsAppImageMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
 
 const orderSchema = z.object({
   items: z.array(
@@ -133,23 +133,51 @@ export async function POST(req: NextRequest) {
       notifyOrderCreated(dbUser.phone, dbUser.name, orderNumber, total).catch(console.error);
     }
 
-    // Notifica todos os telefones admin cadastrados
-    const adminPhones = await prisma.notificationPhone.findMany({ where: { active: true } });
-    if (adminPhones.length > 0) {
-      const itemsList = order.items.map((i) => `${i.product.name} ×${i.quantity}`).join(", ");
-      const adminMsg =
-        `🛍 *Novo Pedido #${orderNumber}*\n\n` +
-        `👤 *Cliente:* ${dbUser?.name ?? "—"}\n` +
-        `📱 *WhatsApp:* ${dbUser?.phone ?? "não informado"}\n` +
-        `📦 *Itens:* ${itemsList}\n` +
-        `💰 *Total:* ${formatCurrency(total)}\n` +
-        `📍 *Cidade:* ${data.city}/${data.state}\n\n` +
-        `Acesse o painel admin para gerenciar.\n` +
-        `— *Triade Select*`;
+    // Monta a mensagem admin
+    const itemsList = order.items.map((i) => {
+      const variants = [
+        (i as any).selectedColor, (i as any).selectedSize, (i as any).selectedClosure
+      ].filter(Boolean).join(", ");
+      return `${i.product.name} ×${i.quantity}${variants ? ` (${variants})` : ""}`;
+    }).join("\n  • ");
 
-      for (const ap of adminPhones) {
-        sendWhatsAppMessage(ap.phone, adminMsg).catch(console.error);
+    const hasLogo = order.items.some((i) => (i as any).hasCustomization && (i as any).logoUrl);
+
+    const adminMsg =
+      `🛍 *Novo Pedido #${orderNumber}*${hasLogo ? " 🎨 *COM LOGO*" : ""}\n\n` +
+      `👤 *Cliente:* ${dbUser?.name ?? "—"}\n` +
+      `📱 *WhatsApp:* ${dbUser?.phone ?? "não informado"}\n` +
+      `📦 *Itens:*\n  • ${itemsList}\n` +
+      `💰 *Total:* ${formatCurrency(total)}\n` +
+      `📍 *Cidade:* ${data.city}/${data.state}\n\n` +
+      `Acesse o painel admin para gerenciar.\n` +
+      `— *Triade Select*`;
+
+    // 1. Notifica grupo WhatsApp específico (se configurado)
+    const groupConfig = await prisma.siteConfig.findUnique({ where: { key: "whatsapp_group_id" } });
+    const groupId = groupConfig?.value?.trim() || process.env.WHATSAPP_GROUP_ID;
+
+    if (groupId) {
+      sendWhatsAppGroupMessage(groupId, adminMsg).catch(console.error);
+
+      // Envia preview da logo como imagem no grupo
+      if (hasLogo) {
+        for (const item of order.items as any[]) {
+          if (item.hasCustomization && item.logoUrl) {
+            const logoCaption =
+              `📎 *Logo do pedido #${orderNumber}*\n` +
+              `Produto: ${item.product.name}\n` +
+              `Cliente: ${dbUser?.name ?? "—"}`;
+            sendWhatsAppImageMessage(groupId, item.logoUrl, logoCaption, { raw: true }).catch(console.error);
+          }
+        }
       }
+    }
+
+    // 2. Notifica telefones individuais admin cadastrados
+    const adminPhones = await prisma.notificationPhone.findMany({ where: { active: true } });
+    for (const ap of adminPhones) {
+      sendWhatsAppMessage(ap.phone, adminMsg).catch(console.error);
     }
 
     return NextResponse.json(order, { status: 201 });

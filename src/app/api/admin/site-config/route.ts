@@ -28,6 +28,7 @@ export const DEFAULT_CONFIG = [
   { key: "footer_text", label: "Texto do rodapé", type: "text", section: "geral", value: "Triade Select — Todos os direitos reservados" },
   { key: "whatsapp_contact", label: "WhatsApp para contato (com DDD)", type: "text", section: "geral", value: "" },
   { key: "instagram_url", label: "Instagram (URL)", type: "text", section: "geral", value: "" },
+  { key: "whatsapp_group_id", label: "ID do grupo WhatsApp (Z-API)", type: "text", section: "geral", value: "" },
 ];
 
 export async function GET() {

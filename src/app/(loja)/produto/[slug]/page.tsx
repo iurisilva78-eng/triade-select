@@ -44,6 +44,21 @@ export default function ProdutoPage() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedClosure, setSelectedClosure] = useState<string>("");
 
+  // Mapeamento de nomes de cores em português → CSS
+  const COLOR_MAP: Record<string, string> = {
+    "preto": "#1a1a1a", "branco": "#f5f5f0", "branco off-white": "#f0ebe0",
+    "cinza": "#8a8a8a", "cinza claro": "#c8c8c8", "cinza escuro": "#3d3d3d",
+    "azul": "#1e40af", "azul marinho": "#0d1b3e", "azul royal": "#2563eb",
+    "azul claro": "#60a5fa", "azul petróleo": "#164e63",
+    "verde": "#15803d", "verde militar": "#4a5c2e", "verde escuro": "#14532d",
+    "vermelho": "#dc2626", "bordo": "#7f1d1d", "vinho": "#881337",
+    "rosa": "#ec4899", "rosa claro": "#fbcfe8", "roxo": "#7c3aed",
+    "laranja": "#ea580c", "amarelo": "#eab308",
+    "bege": "#d4b896", "marrom": "#92400e", "caqui": "#c3a882",
+    "dourado": "#b8860b", "prata": "#b0b0b0",
+  };
+  const getColorCss = (name: string) => COLOR_MAP[name.toLowerCase()] ?? name;
+
   useEffect(() => {
     fetch(`/api/products?slug=${slug}`)
       .then((r) => r.json())
@@ -161,7 +176,10 @@ export default function ProdutoPage() {
               <div className="relative w-48 h-56">
                 {/* Corpo da capa */}
                 <div className="absolute inset-x-0 bottom-0 top-10 rounded-b-3xl border border-[var(--border)]"
-                  style={{ backgroundColor: selectedColor ? undefined : "#2a2a2a", background: selectedColor ? `${selectedColor}33` : undefined, borderColor: selectedColor || undefined }} />
+                  style={{
+                    backgroundColor: selectedColor ? getColorCss(selectedColor) : "#2a2a2a",
+                    opacity: 0.9,
+                  }} />
                 {/* Gola */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-12 bg-[#111] rounded-b-2xl border-x border-b border-[var(--border)]" />
                 {/* Logo na área do peito */}
@@ -175,8 +193,8 @@ export default function ProdutoPage() {
               </div>
               {selectedColor && (
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: selectedColor }} />
-                  <span className="text-xs text-[var(--text-muted)]">Cor selecionada</span>
+                  <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: getColorCss(selectedColor) }} />
+                  <span className="text-xs text-[var(--text-muted)]">{selectedColor}</span>
                 </div>
               )}
             </div>
@@ -210,15 +228,27 @@ export default function ProdutoPage() {
           {/* Seletores de variantes */}
           {product.availableColors?.length > 0 && (
             <div>
-              <p className="text-sm font-semibold text-[var(--text)] mb-2">Cor</p>
-              <div className="flex flex-wrap gap-2">
+              <p className="text-sm font-semibold text-[var(--text)] mb-2">Cor do tecido</p>
+              <div className="flex flex-wrap gap-2.5">
                 {product.availableColors.map((color) => (
-                  <button key={color} onClick={() => setSelectedColor(color)}
+                  <button
+                    key={color}
+                    onClick={() => setSelectedColor(color)}
                     title={color}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === color ? "border-[var(--gold)] scale-110" : "border-transparent hover:border-white/40"}`}
-                    style={{ backgroundColor: color }} />
+                    className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 ${
+                      selectedColor === color
+                        ? "border-[var(--gold)] scale-110 ring-2 ring-[var(--gold)]/30"
+                        : "border-white/20 hover:border-white/50"
+                    }`}
+                    style={{ backgroundColor: getColorCss(color) }}
+                  />
                 ))}
               </div>
+              {selectedColor && (
+                <p className="text-xs text-[var(--text-muted)] mt-1.5">
+                  Selecionado: <span className="text-[var(--text-secondary)] font-medium">{selectedColor}</span>
+                </p>
+              )}
             </div>
           )}
 
