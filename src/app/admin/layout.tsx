@@ -25,9 +25,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen flex bg-[var(--bg)]">
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-60 bg-[var(--surface)] border-r border-[var(--border)] p-4">
-        <Link href="/admin" className="flex items-center gap-2 mb-8 px-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--gold)] flex items-center justify-center">
-            <span className="text-black font-bold text-sm">T</span>
+        <Link href="/admin" className="flex items-center gap-2.5 mb-8 px-2">
+          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center p-1 shadow-sm">
+            <img src="/logo.png" alt="Triade Select" className="w-full h-full object-contain" onError={(e)=>{(e.target as HTMLImageElement).src="/logo.svg"}} />
           </div>
           <span className="font-bold text-[var(--text)]">Admin</span>
         </Link>
@@ -57,9 +57,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
         <header className="md:hidden bg-[var(--surface)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
-          <span className="font-bold text-[var(--text)]">
-            Triade <span className="text-[var(--gold)]">Admin</span>
-          </span>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-0.5">
+              <img src="/logo.png" alt="Triade Select" className="w-full h-full object-contain" onError={(e)=>{(e.target as HTMLImageElement).src="/logo.svg"}} />
+            </div>
+            <span className="font-bold text-[var(--text)]">
+              Triade <span className="text-[var(--gold)]">Admin</span>
+            </span>
+          </div>
           <div className="flex gap-2 overflow-x-auto">
             {navItems.map(({ href, label, icon: Icon }) => (
               <Link

@@ -4,6 +4,19 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 
+async function uniqueSlug(name: string, excludeId: string): Promise<string> {
+  const base = slugify(name);
+  let slug = base;
+  let i = 2;
+  while (true) {
+    const existing = await prisma.product.findUnique({ where: { slug } });
+    if (!existing || existing.id === excludeId) break;
+    slug = `${base}-${i}`;
+    i++;
+  }
+  return slug;
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -33,10 +46,15 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
   const data: any = { ...body };
-  if (data.name) data.slug = slugify(data.name);
+  if (data.name) data.slug = await uniqueSlug(data.name, id);
 
-  const product = await prisma.product.update({ where: { id }, data });
-  return NextResponse.json(product);
+  try {
+    const product = await prisma.product.update({ where: { id }, data });
+    return NextResponse.json(product);
+  } catch (err) {
+    console.error("[PATCH /api/products/:id]", err);
+    return NextResponse.json({ error: "Erro ao atualizar produto." }, { status: 500 });
+  }
 }
 
 export async function DELETE(

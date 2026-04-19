@@ -135,6 +135,15 @@ export default function AdminProdutosPage() {
 
   const handleSave = async () => {
     setError("");
+
+    // Validação local antes de enviar
+    if (!form.name.trim()) { setError("Informe o nome do produto."); return; }
+    if (!form.description.trim()) { setError("Informe a descrição."); return; }
+    if (!form.categoryId) { setError("Selecione uma categoria."); return; }
+    if (!form.priceBase || isNaN(parseFloat(form.priceBase))) { setError("Informe o preço base."); return; }
+    if (!form.priceWithCustom || isNaN(parseFloat(form.priceWithCustom))) { setError("Informe o preço com logo."); return; }
+    if (!form.weightGrams || isNaN(parseInt(form.weightGrams))) { setError("Informe o peso."); return; }
+
     setSaving(true);
 
     const body = {
