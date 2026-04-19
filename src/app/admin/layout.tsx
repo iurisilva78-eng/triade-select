@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { LayoutDashboard, Package, ShoppingBag, Users, Factory, Settings, PenSquare } from "lucide-react";
+import { LogoImg } from "@/components/ui/logo-img";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -27,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <aside className="hidden md:flex flex-col w-60 bg-[var(--surface)] border-r border-[var(--border)] p-4">
         <Link href="/admin" className="flex items-center gap-2.5 mb-8 px-2">
           <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center p-1 shadow-sm">
-            <img src="/logo.png" alt="Triade Select" className="w-full h-full object-contain" onError={(e)=>{(e.target as HTMLImageElement).src="/logo.svg"}} />
+            <LogoImg />
           </div>
           <span className="font-bold text-[var(--text)]">Admin</span>
         </Link>
@@ -59,7 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <header className="md:hidden bg-[var(--surface)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-0.5">
-              <img src="/logo.png" alt="Triade Select" className="w-full h-full object-contain" onError={(e)=>{(e.target as HTMLImageElement).src="/logo.svg"}} />
+              <LogoImg />
             </div>
             <span className="font-bold text-[var(--text)]">
               Triade <span className="text-[var(--gold)]">Admin</span>
