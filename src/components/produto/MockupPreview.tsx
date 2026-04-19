@@ -1,43 +1,24 @@
 "use client";
 
+import { DEFAULT_MOCKUP_CONFIG, MockupTypeConfig } from "@/lib/mockup-config";
+
 interface MockupPreviewProps {
   mockupType: string;
   logoPreview: string | null;
   logoFileName?: string;
   selectedColor?: string;
+  /** Sobrescreve a config padrão (usado pelo editor admin e pela página do produto) */
+  configOverride?: Record<string, MockupTypeConfig>;
 }
 
-interface LogoZone {
-  top: string;
-  left: string;
-  size: string;
-  label?: string;
-}
-
-const MOCKUP_CONFIG: Record<string, { image: string; zones: LogoZone[] }> = {
-  capa: {
-    image: "/mockups/capa.png",
-    zones: [
-      { top: "23%", left: "50%", size: "25%", label: "Peito" },
-    ],
-  },
-  camiseta: {
-    image: "/mockups/camiseta.png",
-    zones: [
-      { top: "30%", left: "60%", size: "13%", label: "Peito" },
-    ],
-  },
-  "camiseta-dupla": {
-    image: "/mockups/camiseta-dupla.png",
-    zones: [
-      { top: "30%", left: "24%", size: "9%",  label: "Peito" },
-      { top: "28%", left: "74%", size: "14%", label: "Costas" },
-    ],
-  },
-};
-
-export function MockupPreview({ mockupType, logoPreview, logoFileName }: MockupPreviewProps) {
-  const config = MOCKUP_CONFIG[mockupType] ?? MOCKUP_CONFIG["capa"];
+export function MockupPreview({
+  mockupType,
+  logoPreview,
+  logoFileName,
+  configOverride,
+}: MockupPreviewProps) {
+  const configMap = configOverride ?? DEFAULT_MOCKUP_CONFIG;
+  const config = configMap[mockupType] ?? DEFAULT_MOCKUP_CONFIG["capa"];
 
   return (
     <div className="relative w-full h-full">
@@ -47,7 +28,6 @@ export function MockupPreview({ mockupType, logoPreview, logoFileName }: MockupP
         alt="Mockup do produto"
         className="w-full h-full object-contain"
         onError={(e) => {
-          // Fallback se a imagem não foi salva ainda
           (e.target as HTMLImageElement).style.display = "none";
         }}
       />
@@ -78,9 +58,7 @@ export function MockupPreview({ mockupType, logoPreview, logoFileName }: MockupP
             )}
 
             {/* Indicador da zona */}
-            <div
-              className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-semibold text-white/70 whitespace-nowrap bg-black/40 px-1.5 py-0.5 rounded-full"
-            >
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-semibold text-white/70 whitespace-nowrap bg-black/40 px-1.5 py-0.5 rounded-full">
               {zone.label}
             </div>
           </div>

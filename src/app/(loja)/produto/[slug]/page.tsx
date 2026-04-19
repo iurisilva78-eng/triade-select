@@ -7,6 +7,7 @@ import { useCartStore } from "@/store/cartStore";
 import { formatCurrency } from "@/lib/utils";
 import { ShoppingCart, Upload, X, Clock, Package, CheckCircle, Eye } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
+import { MockupTypeConfig } from "@/lib/mockup-config";
 
 interface Product {
   id: string;
@@ -48,6 +49,16 @@ export default function ProdutoPage() {
 
   // Modal de confirmação do mockup
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Config de posição dos mockups (carregada do admin)
+  const [mockupConfig, setMockupConfig] = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
+
+  useEffect(() => {
+    fetch("/api/admin/mockup-config")
+      .then((r) => r.json())
+      .then((data) => { if (data) setMockupConfig(data); })
+      .catch(() => {});
+  }, []);
 
   // Mapeamento de nomes de cores em português → CSS
   const COLOR_MAP: Record<string, string> = {
@@ -184,6 +195,7 @@ export default function ProdutoPage() {
               logoPreview={logoPreview}
               logoFileName={logoFile?.name}
               selectedColor={selectedColor}
+              configOverride={mockupConfig}
             />
           ) : product.images[0] ? (
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
@@ -429,6 +441,7 @@ export default function ProdutoPage() {
                   logoPreview={logoPreview}
                   logoFileName={logoFile?.name}
                   selectedColor={selectedColor}
+                  configOverride={mockupConfig}
                 />
               </div>
             </div>
