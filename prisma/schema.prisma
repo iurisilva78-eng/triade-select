@@ -114,6 +114,7 @@ model Product {
   lengthCm            Float
   allowsCustomization Boolean  @default(true)
   active              Boolean  @default(true)
+  mockupType          String   @default("capa")
   images              String[]
   availableColors     String[]
   availableSizes      String[]

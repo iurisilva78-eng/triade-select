@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cartStore";
 import { formatCurrency } from "@/lib/utils";
 import { ShoppingCart, Upload, X, Clock, Package } from "lucide-react";
+import { MockupPreview } from "@/components/produto/MockupPreview";
 
 interface Product {
   id: string;
@@ -16,6 +17,7 @@ interface Product {
   priceWithCustom: number;
   productionDays: number;
   allowsCustomization: boolean;
+  mockupType: string;
   images: string[];
   weightGrams: number;
   heightCm: number;
@@ -167,39 +169,33 @@ export default function ProdutoPage() {
       <div className="grid md:grid-cols-2 gap-10">
         {/* Imagem / Mockup */}
         <div className="aspect-square bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative">
-          {product.images[0] ? (
+          {hasCustomization && (logoPreview || logoFile) ? (
+            /* Mockup real com logo sobreposta */
+            <MockupPreview
+              mockupType={product.mockupType ?? "capa"}
+              logoPreview={logoPreview}
+              logoFileName={logoFile?.name}
+              selectedColor={selectedColor}
+            />
+          ) : product.images[0] ? (
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-          ) : hasCustomization && (logoPreview || logoFile) ? (
-            /* Mockup visual da capa com logo */
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#141414] p-6 gap-2">
-              <p className="text-xs text-[var(--text-muted)] mb-2">Prévia aproximada</p>
-              <div className="relative w-48 h-56">
-                {/* Corpo da capa */}
-                <div className="absolute inset-x-0 bottom-0 top-10 rounded-b-3xl border border-[var(--border)]"
-                  style={{
-                    backgroundColor: selectedColor ? getColorCss(selectedColor) : "#2a2a2a",
-                    opacity: 0.9,
-                  }} />
-                {/* Gola */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-12 bg-[#111] rounded-b-2xl border-x border-b border-[var(--border)]" />
-                {/* Logo na área do peito */}
-                <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-20 h-20 flex items-center justify-center">
-                  {logoPreview ? (
-                    <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain drop-shadow-lg" />
-                  ) : logoFile?.name?.endsWith(".pdf") ? (
-                    <div className="text-3xl">📄</div>
-                  ) : null}
-                </div>
-              </div>
-              {selectedColor && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: getColorCss(selectedColor) }} />
-                  <span className="text-xs text-[var(--text-muted)]">{selectedColor}</span>
-                </div>
-              )}
-            </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-8xl bg-[#141414]">🧣</div>
+            /* Mockup base sem logo */
+            <div className="w-full h-full relative bg-[#111]">
+              <img
+                src={`/mockups/${product.mockupType ?? "capa"}.jpg`}
+                alt={product.name}
+                className="w-full h-full object-contain opacity-80"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+              <div className="absolute inset-0 flex items-end justify-center pb-4">
+                <p className="text-xs text-white/40 bg-black/30 px-3 py-1 rounded-full">
+                  Adicione uma logo para ver a prévia personalizada
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

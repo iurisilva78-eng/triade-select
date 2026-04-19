@@ -29,6 +29,12 @@ interface Category {
   name: string;
 }
 
+const MOCKUP_OPTIONS = [
+  { value: "capa",           label: "🧣 Capa de barbearia" },
+  { value: "camiseta",       label: "👕 Camiseta — logo no peito" },
+  { value: "camiseta-dupla", label: "👕 Camiseta — logo no peito + costas" },
+];
+
 const emptyForm = {
   name: "",
   description: "",
@@ -41,6 +47,7 @@ const emptyForm = {
   widthCm: "20",
   lengthCm: "30",
   allowsCustomization: true,
+  mockupType: "capa",
   images: [] as string[],
   availableColors: "",
   availableSizes: "",
@@ -95,6 +102,7 @@ export default function AdminProdutosPage() {
       widthCm: "20",
       lengthCm: "30",
       allowsCustomization: true,
+      mockupType: (product as any).mockupType ?? "capa",
       images: product.images ?? [],
       availableColors: (product.availableColors ?? []).join(", "),
       availableSizes: (product.availableSizes ?? []).join(", "),
@@ -158,6 +166,7 @@ export default function AdminProdutosPage() {
       widthCm: parseFloat(form.widthCm),
       lengthCm: parseFloat(form.lengthCm),
       allowsCustomization: form.allowsCustomization,
+      mockupType: form.mockupType,
       images: form.images,
       availableColors: toArray(form.availableColors),
       availableSizes: toArray(form.availableSizes),
@@ -322,6 +331,33 @@ export default function AdminProdutosPage() {
                 <p className="text-xs text-[var(--text-muted)] mt-1.5">
                   A primeira foto será usada como capa. Em produção configure IMGBB_API_KEY no Netlify.
                 </p>
+              </div>
+
+              {/* ── Tipo de mockup ── */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-[var(--text)]">Tipo de mockup (prévia personalizada)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {MOCKUP_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, mockupType: opt.value }))}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-xs font-medium transition-colors ${
+                        form.mockupType === opt.value
+                          ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]"
+                          : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]/50"
+                      }`}
+                    >
+                      <img
+                        src={`/mockups/${opt.value}.jpg`}
+                        alt={opt.label}
+                        className="w-16 h-16 object-contain rounded-lg bg-[var(--surface-2)]"
+                        onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+                      />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* ── Informações básicas ── */}
