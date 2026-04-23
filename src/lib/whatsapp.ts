@@ -25,9 +25,13 @@ export interface WhatsAppConfig {
 }
 
 export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
-  // Tenta env vars primeiro (compatibilidade legada)
-  const envUrl = process.env.WHATSAPP_API_URL?.trim();
-  const envToken = process.env.WHATSAPP_CLIENT_TOKEN?.trim();
+  // Env vars (fallback / compatibilidade)
+  const envProvider    = (process.env.WHATSAPP_PROVIDER?.trim() || "") as WhatsAppProvider | "";
+  const envUrl         = process.env.WHATSAPP_API_URL?.trim() ?? "";
+  const envToken       = process.env.WHATSAPP_CLIENT_TOKEN?.trim() ?? "";
+  const envEvoBaseUrl  = process.env.WHATSAPP_EVO_BASE_URL?.trim() ?? "";
+  const envEvoInstance = process.env.WHATSAPP_EVO_INSTANCE?.trim() ?? "";
+  const envEvoApiKey   = process.env.WHATSAPP_EVO_API_KEY?.trim() ?? "";
 
   try {
     const rows = await prisma.siteConfig.findMany({
@@ -44,29 +48,31 @@ export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
 
     const get = (key: string) => rows.find((r) => r.key === key)?.value?.trim() ?? "";
 
-    const provider = (get("whatsapp_provider") || "zapi") as WhatsAppProvider;
+    // DB tem prioridade; env var é fallback
+    const provider = (get("whatsapp_provider") || envProvider || "evolution") as WhatsAppProvider;
 
     if (provider === "evolution") {
       return {
         provider: "evolution",
-        evoBaseUrl: get("whatsapp_evo_base_url"),
-        evoInstance: get("whatsapp_evo_instance"),
-        evoApiKey: get("whatsapp_evo_api_key"),
+        evoBaseUrl:  get("whatsapp_evo_base_url")  || envEvoBaseUrl,
+        evoInstance: get("whatsapp_evo_instance")  || envEvoInstance || "triade-select",
+        evoApiKey:   get("whatsapp_evo_api_key")   || envEvoApiKey,
       };
     }
 
-    // Z-API (padrão)
+    // Z-API
     return {
       provider: "zapi",
-      zapiUrl: get("whatsapp_api_url") || envUrl || "",
-      zapiClientToken: get("whatsapp_client_token") || envToken || "",
+      zapiUrl:         get("whatsapp_api_url")       || envUrl,
+      zapiClientToken: get("whatsapp_client_token")  || envToken,
     };
   } catch {
-    return {
-      provider: "zapi",
-      zapiUrl: envUrl ?? "",
-      zapiClientToken: envToken ?? "",
-    };
+    // Fallback total para env vars quando DB está inacessível
+    const provider = (envProvider || "evolution") as WhatsAppProvider;
+    if (provider === "evolution") {
+      return { provider: "evolution", evoBaseUrl: envEvoBaseUrl, evoInstance: envEvoInstance || "triade-select", evoApiKey: envEvoApiKey };
+    }
+    return { provider: "zapi", zapiUrl: envUrl, zapiClientToken: envToken };
   }
 }
 

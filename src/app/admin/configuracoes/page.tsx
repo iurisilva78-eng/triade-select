@@ -63,14 +63,20 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     loadPhones();
     fetch("/api/admin/site-config").then(r => r.json()).then((data: any[]) => {
-      const g = (k: string) => data.find(d => d.key === k)?.value ?? "";
-      if (g("whatsapp_provider")) setProvider(g("whatsapp_provider") as Provider);
+      const g = (k: string) => data.find((d: any) => d.key === k)?.value ?? "";
+      const savedProvider = g("whatsapp_provider") as Provider;
+      if (savedProvider) setProvider(savedProvider);
       setZapiUrl(g("whatsapp_api_url"));
       setZapiToken(g("whatsapp_client_token"));
       setEvoBaseUrl(g("whatsapp_evo_base_url"));
       setEvoInstance(g("whatsapp_evo_instance") || "triade-select");
       setEvoApiKey(g("whatsapp_evo_api_key"));
       if (g("whatsapp_group_id")) setGroupId(g("whatsapp_group_id"));
+
+      // Auto-verifica status se Evolution já estiver configurada
+      if ((savedProvider || "evolution") === "evolution" && g("whatsapp_evo_base_url") && g("whatsapp_evo_api_key")) {
+        setTimeout(() => checkStatus(), 800);
+      }
     }).catch(() => {});
   }, []);
 
@@ -225,10 +231,10 @@ export default function ConfiguracoesPage() {
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300">
               <p className="font-semibold mb-1">📌 Como usar a Evolution API gratuitamente:</p>
               <ol className="list-decimal list-inside space-y-1 text-amber-400">
-                <li>Acesse <a href="https://railway.app/template/UdA5Bg" target="_blank" className="underline">railway.app/template/UdA5Bg</a> e faça deploy em 1 clique</li>
-                <li>Configure a variável <code className="bg-black/30 px-1 rounded">AUTHENTICATION_API_KEY</code> com uma senha forte</li>
-                <li>Copie a URL gerada (ex: <code className="bg-black/30 px-1 rounded">https://evolution-xxx.up.railway.app</code>)</li>
-                <li>Cole abaixo, escolha um nome para a instância e clique em Salvar + Conectar</li>
+                <li>Acesse <a href="https://railway.com/deploy/evolution-api-4" target="_blank" rel="noreferrer" className="underline">railway.com/deploy/evolution-api-4</a> e faça deploy em 1 clique</li>
+                <li>Após o deploy, copie a URL pública do serviço (ex: <code className="bg-black/30 px-1 rounded">https://evolution-xxx.up.railway.app</code>)</li>
+                <li>A API Key está em <strong>Variables → AUTHENTICATION_API_KEY</strong></li>
+                <li>Cole os dados abaixo, salve e clique em <strong>Gerar QR Code</strong></li>
               </ol>
             </div>
             <div>
