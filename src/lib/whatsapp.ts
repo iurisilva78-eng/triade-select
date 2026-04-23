@@ -5,7 +5,7 @@ import { prisma } from "./prisma";
 
 const STATUS_EMOJI: Record<OrderStatus, string> = {
   RECEBIDO: "📋", ACEITO: "✅", EM_PRODUCAO: "⚙️",
-  ENVIADO: "📦", ENTREGUE: "🎉", CANCELADO: "❌",
+  PRODUTO_PRONTO: "🏁", ENVIADO: "📦", ENTREGUE: "🎉", CANCELADO: "❌",
 };
 
 /* ─────────────────────────────────────────────────
@@ -198,7 +198,8 @@ function buildMessage(
   if (type === "status_update" && status) return (
     `Olá, *${customerName}*! ${STATUS_EMOJI[status]}\n\n` +
     `Pedido *#${orderNumber}* — *${ORDER_STATUS_LABELS[status]}*\n\n` +
-    (status === "EM_PRODUCAO" ? `Sua encomenda já está em produção! 🧵\n\n` : "") +
+    (status === "EM_PRODUCAO" ? `Sua encomenda já está em produção! 🧵 Prazo: ~15 dias úteis.\n\n` : "") +
+    (status === "PRODUTO_PRONTO" ? `Seu produto está pronto na nossa fábrica! 🏁\nAssim que confirmarmos o pagamento restante, enviamos imediatamente.\n\n` : "") +
     `— *Triade Select*`
   );
 
@@ -208,7 +209,13 @@ function buildMessage(
   );
 
   if (type === "delivered") return (
-    `Olá, *${customerName}*! 🎉\n\nSeu pedido *#${orderNumber}* foi entregue!\n\n` +
+    `Olá, *${customerName}*! 🎉\n\n` +
+    `Seu pedido *#${orderNumber}* foi entregue! Parabéns pela compra!\n\n` +
+    `Esperamos que você esteja amando o produto ❤️\n\n` +
+    `🎥 *Missão especial para você:*\n` +
+    `Poste um vídeo de 30 segundos no Instagram usando o produto e marque *@triadeselect*.\n\n` +
+    `🏷️ *Você ganha 50% de desconto* na próxima unidade!\n` +
+    `_Ex: 2 capas de R$79,90 → você paga R$79,90 + R$39,95_\n\n` +
     `Obrigado pela confiança! 🙏\n— *Triade Select*`
   );
 

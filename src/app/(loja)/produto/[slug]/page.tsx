@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cartStore";
 import { formatCurrency } from "@/lib/utils";
-import { ShoppingCart, Upload, X, Clock, Package, CheckCircle, Eye } from "lucide-react";
+import { ShoppingCart, Upload, X, Clock, Package, CheckCircle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
 import { SizeGuide } from "@/components/produto/SizeGuide";
@@ -39,6 +39,7 @@ export default function ProdutoPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [hasCustomization, setHasCustomization] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -146,10 +147,19 @@ export default function ProdutoPage() {
       }
     }
 
+    // Usa a foto da cor selecionada se disponível, senão a primeira imagem do produto
+    const colorKey = selectedColor?.toLowerCase();
+    const cartImage =
+      (colorKey && product.colorImages?.[colorKey])
+        ? product.colorImages[colorKey]
+        : (colorKey && product.colorImages?.[selectedColor])
+        ? product.colorImages[selectedColor]
+        : product.images[currentImageIdx] ?? product.images[0] ?? "";
+
     addItem({
       productId: product.id,
       name: product.name,
-      image: product.images[0] ?? "",
+      image: cartImage,
       quantity,
       unitPrice: hasCustomization ? product.priceWithCustom : product.priceBase,
       hasCustomization,
@@ -190,38 +200,90 @@ export default function ProdutoPage() {
       <div className="grid md:grid-cols-2 gap-10">
 
         {/* ── Imagem / Mockup ── */}
-        <div className="aspect-square bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative">
-          {hasCustomization && (logoPreview || logoFile) ? (
-            <MockupPreview
-              mockupType={product.mockupType ?? "capa"}
-              logoPreview={logoPreview}
-              logoFileName={logoFile?.name}
-              selectedColor={selectedColor}
-              configOverride={mockupConfig}
-              colorImages={product.colorImages}
-            />
-          ) : product.images[0] ? (
-            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full relative bg-[#111]">
-              <img
-                src={`/mockups/${product.mockupType ?? "capa"}.png`}
-                alt={product.name}
-                className="w-full h-full object-contain opacity-80"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        <div className="flex flex-col gap-3">
+          <div className="aspect-square bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative">
+            {hasCustomization && (logoPreview || logoFile) ? (
+              <MockupPreview
+                mockupType={product.mockupType ?? "capa"}
+                logoPreview={logoPreview}
+                logoFileName={logoFile?.name}
+                selectedColor={selectedColor}
+                configOverride={mockupConfig}
+                colorImages={product.colorImages}
               />
-              <div className="absolute inset-0 flex items-end justify-center pb-4">
-                <p className="text-xs text-white/40 bg-black/30 px-3 py-1 rounded-full">
-                  Adicione uma logo para ver a prévia personalizada
-                </p>
+            ) : product.images.length > 0 ? (
+              <>
+                <img
+                  src={product.images[currentImageIdx] ?? product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+                {/* Setas de navegação (só se tiver mais de 1 imagem) */}
+                {product.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCurrentImageIdx((i) => (i - 1 + product.images.length) % product.images.length)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={() => setCurrentImageIdx((i) => (i + 1) % product.images.length)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                    {/* Dots */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {product.images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentImageIdx(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIdx ? "bg-[var(--gold)] w-4" : "bg-white/50"}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="w-full h-full relative bg-[#111]">
+                <img
+                  src={`/mockups/${product.mockupType ?? "capa"}.png`}
+                  alt={product.name}
+                  className="w-full h-full object-contain opacity-80"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+                <div className="absolute inset-0 flex items-end justify-center pb-4">
+                  <p className="text-xs text-white/40 bg-black/30 px-3 py-1 rounded-full">
+                    Adicione uma logo para ver a prévia personalizada
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Badge "Prévia ao vivo" quando logo está carregada */}
-          {hasCustomization && logoFile && (
-            <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-[var(--gold)] text-black text-[10px] font-bold px-2.5 py-1 rounded-full">
-              <Eye size={10} /> Prévia ao vivo
+            {/* Badge "Prévia ao vivo" quando logo está carregada */}
+            {hasCustomization && logoFile && (
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-[var(--gold)] text-black text-[10px] font-bold px-2.5 py-1 rounded-full">
+                <Eye size={10} /> Prévia ao vivo
+              </div>
+            )}
+          </div>
+
+          {/* Thumbnails */}
+          {product.images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentImageIdx(idx)}
+                  className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                    idx === currentImageIdx ? "border-[var(--gold)]" : "border-[var(--border)] opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
           )}
         </div>

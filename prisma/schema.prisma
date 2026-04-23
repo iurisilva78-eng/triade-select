@@ -15,6 +15,7 @@ enum OrderStatus {
   RECEBIDO
   ACEITO
   EM_PRODUCAO
+  PRODUTO_PRONTO
   ENVIADO
   ENTREGUE
   CANCELADO
@@ -152,6 +153,9 @@ model Order {
   shippingService   String?
   notes             String?
   cancelRequestedAt DateTime?
+  couponCode        String?
+  couponDiscount    Float     @default(0)
+  productionSteps   Json      @default("[]")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -236,6 +240,22 @@ model SiteConfig {
   updatedAt DateTime @updatedAt @default(now())
 
   @@map("site_config")
+}
+
+model Coupon {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  description   String    @default("")
+  type          String    @default("percent") // "percent" | "fixed" | "shipping"
+  value         Float
+  minOrderValue Float     @default(0)
+  maxUses       Int?
+  uses          Int       @default(0)
+  active        Boolean   @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@map("coupons")
 }
 
 model NotificationPhone {

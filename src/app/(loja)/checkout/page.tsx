@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import type { FreightOption, AddressData } from "@/types";
-import { MapPin, Truck, Check } from "lucide-react";
+import { MapPin, Truck, Check, Tag, X } from "lucide-react";
 
 export default function CheckoutPage() {
   const { data: session } = useSession();
@@ -25,6 +25,14 @@ export default function CheckoutPage() {
   const [loadingCep, setLoadingCep] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [cepError, setCepError] = useState("");
+
+  // Cupom
+  const [couponCode, setCouponCode]       = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponType, setCouponType]       = useState<"percent"|"fixed"|"shipping"|null>(null);
+  const [couponApplied, setCouponApplied] = useState("");
+  const [loadingCoupon, setLoadingCoupon] = useState(false);
+  const [couponError, setCouponError]     = useState("");
 
   if (!session) {
     return (
@@ -45,8 +53,33 @@ export default function CheckoutPage() {
 
   const subtotal = total();
   const freightCost = selectedFreight?.price ?? 0;
-  const orderTotal = subtotal + freightCost;
-  const minimumPayment = orderTotal * 0.5;
+
+  // Cupom
+  const applyFreightDiscount = couponType === "shipping" ? Math.min(couponDiscount, freightCost) : 0;
+  const applyCartDiscount    = couponType !== "shipping" ? couponDiscount : 0;
+  const totalDiscount        = applyFreightDiscount + applyCartDiscount;
+  const orderTotal           = Math.max(0, subtotal + freightCost - totalDiscount);
+  const minimumPayment       = orderTotal * 0.5;
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponError(""); setLoadingCoupon(true);
+    const res = await fetch("/api/coupon/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: couponCode, orderTotal: subtotal + freightCost }),
+    });
+    const data = await res.json();
+    setLoadingCoupon(false);
+    if (!res.ok) { setCouponError(data.error ?? "Cupom inválido."); return; }
+    setCouponDiscount(data.discount);
+    setCouponType(data.type);
+    setCouponApplied(data.code);
+  };
+
+  const removeCoupon = () => {
+    setCouponCode(""); setCouponDiscount(0); setCouponType(null); setCouponApplied(""); setCouponError("");
+  };
 
   const searchCep = async () => {
     const clean = cep.replace(/\D/g, "");
@@ -122,6 +155,8 @@ export default function CheckoutPage() {
           state: address.state,
           freightService: selectedFreight.service,
           freightCost: selectedFreight.price,
+          couponCode: couponApplied || undefined,
+          couponDiscount: totalDiscount || undefined,
         }),
       });
 
@@ -268,7 +303,36 @@ export default function CheckoutPage() {
             ))}
           </div>
 
-          <div className="border-t border-[var(--border)] pt-3 flex flex-col gap-2 text-sm">
+          {/* Campo de cupom */}
+          <div className="border-t border-[var(--border)] pt-4 mb-3">
+            {couponApplied ? (
+              <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Tag size={14} className="text-green-400" />
+                  <span className="text-sm font-bold text-green-400 font-mono">{couponApplied}</span>
+                  <span className="text-xs text-green-400">−{formatCurrency(totalDiscount)}</span>
+                </div>
+                <button onClick={removeCoupon} className="text-green-400/60 hover:text-red-400">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={couponCode}
+                  onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
+                  placeholder="Cupom de desconto"
+                  className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-3 py-2.5 text-sm font-mono outline-none focus:border-[var(--gold)] uppercase"
+                />
+                <Button variant="secondary" onClick={applyCoupon} loading={loadingCoupon} disabled={!couponCode.trim()}>
+                  Aplicar
+                </Button>
+              </div>
+            )}
+            {couponError && <p className="text-red-400 text-xs mt-1.5">{couponError}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2 text-sm mb-3">
             <div className="flex justify-between text-[var(--text-secondary)]">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
@@ -277,9 +341,15 @@ export default function CheckoutPage() {
               <span>Frete ({selectedFreight?.name ?? "—"})</span>
               <span>{selectedFreight ? formatCurrency(freightCost) : "—"}</span>
             </div>
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-green-400 font-medium">
+                <span>Desconto cupom</span>
+                <span>−{formatCurrency(totalDiscount)}</span>
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-between font-bold text-lg mt-3 mb-4">
+          <div className="flex justify-between font-bold text-lg mb-4 pt-2 border-t border-[var(--border)]">
             <span className="text-[var(--text)]">Total</span>
             <span className="text-[var(--gold)]">{formatCurrency(orderTotal)}</span>
           </div>

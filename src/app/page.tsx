@@ -34,7 +34,7 @@ export default async function HomePage() {
 
       {/* Hero */}
       <section
-        className="flex-1 flex items-center justify-center px-4 py-20 text-center relative overflow-hidden"
+        className="flex items-center justify-center px-4 py-10 md:py-20 text-center relative overflow-hidden min-h-[calc(100dvh-64px)]"
         style={cfg.hero_image ? {
           backgroundImage: `url(${cfg.hero_image})`,
           backgroundSize: "cover",
@@ -44,16 +44,16 @@ export default async function HomePage() {
         {cfg.hero_image && (
           <div className="absolute inset-0 bg-black/60" />
         )}
-        <div className="max-w-3xl relative z-10">
+        <div className="max-w-3xl relative z-10 w-full">
           {cfg.hero_badge && (
-            <div className="inline-flex items-center gap-2 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-full px-4 py-1.5 text-sm text-[var(--gold)] font-medium mb-6">
+            <div className="inline-flex items-center gap-2 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-full px-4 py-1.5 text-sm text-[var(--gold)] font-medium mb-4 md:mb-6">
               {cfg.hero_badge}
             </div>
           )}
-          <h1 className="text-4xl md:text-6xl font-bold text-[var(--text)] leading-tight mb-5">
+          <h1 className="text-3xl md:text-6xl font-bold text-[var(--text)] leading-tight mb-3 md:mb-5">
             {cfg.hero_title}
           </h1>
-          <p className="text-lg text-[var(--text-secondary)] mb-8 max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-[var(--text-secondary)] mb-6 md:mb-8 max-w-xl mx-auto">
             {cfg.hero_subtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

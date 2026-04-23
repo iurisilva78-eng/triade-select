@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { Tag, Clock } from "lucide-react";
+// searchParams kept for future search feature
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +12,10 @@ export default async function ProdutosPage({
 }: {
   searchParams: { category?: string; search?: string };
 }) {
-  const [products, categories] = await Promise.all([
+  const [products] = await Promise.all([
     prisma.product.findMany({
       where: {
         active: true,
-        ...(searchParams.category
-          ? { category: { slug: searchParams.category } }
-          : {}),
         ...(searchParams.search
           ? { name: { contains: searchParams.search, mode: "insensitive" } }
           : {}),
@@ -25,7 +23,6 @@ export default async function ProdutosPage({
       include: { category: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
@@ -42,32 +39,6 @@ export default async function ProdutosPage({
         </p>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-2 mb-8">
-        <Link
-          href="/produtos"
-          className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-            !searchParams.category
-              ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-              : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)] hover:text-[var(--gold)]"
-          }`}
-        >
-          Todos
-        </Link>
-        {categories.map((cat) => (
-          <Link
-            key={cat.id}
-            href={`/produtos?category=${cat.slug}`}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-              searchParams.category === cat.slug
-                ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-                : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)] hover:text-[var(--gold)]"
-            }`}
-          >
-            {cat.name}
-          </Link>
-        ))}
-      </div>
 
       {/* Grid */}
       {products.length === 0 ? (

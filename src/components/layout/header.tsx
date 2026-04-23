@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { ShoppingBag, Package, LogOut, Settings, Menu, X } from "lucide-react";
+import { ShoppingBag, LogOut, Settings, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { Button } from "@/components/ui/button";
@@ -35,12 +35,14 @@ export function Header() {
             Produtos
           </Link>
           {session && (
-            <Link
-              href="/pedidos"
-              className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors text-sm font-medium"
-            >
-              Meus Pedidos
-            </Link>
+            <>
+              <Link href="/pedidos" className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors text-sm font-medium">
+                Meus Pedidos
+              </Link>
+              <Link href="/conta" className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors text-sm font-medium flex items-center gap-1">
+                <User size={13} /> Minha Conta
+              </Link>
+            </>
           )}
           {user?.role === "ADMIN" && (
             <Link
@@ -104,9 +106,14 @@ export function Header() {
             Produtos
           </Link>
           {session && (
-            <Link href="/pedidos" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--text-secondary)] font-medium">
-              Meus Pedidos
-            </Link>
+            <>
+              <Link href="/pedidos" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--text-secondary)] font-medium">
+                Meus Pedidos
+              </Link>
+              <Link href="/conta" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--text-secondary)] font-medium">
+                Minha Conta
+              </Link>
+            </>
           )}
           {user?.role === "ADMIN" && (
             <Link href="/admin" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--gold)] font-medium">

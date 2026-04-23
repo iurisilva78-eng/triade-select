@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { notifyStatusUpdate } from "@/lib/whatsapp";
 import type { OrderStatus } from "@prisma/client";
 
-const VALID_STATUSES: OrderStatus[] = ["RECEBIDO", "ACEITO", "EM_PRODUCAO", "ENVIADO", "ENTREGUE", "CANCELADO"];
+const VALID_STATUSES: OrderStatus[] = ["RECEBIDO", "ACEITO", "EM_PRODUCAO", "PRODUTO_PRONTO", "ENVIADO", "ENTREGUE", "CANCELADO"];
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);

@@ -8,7 +8,7 @@ import { ORDER_STATUS_FLOW } from "@/types";
 import type { OrderStatus, PaymentStatus } from "@prisma/client";
 
 const updateSchema = z.object({
-  status: z.enum(["RECEBIDO", "ACEITO", "EM_PRODUCAO", "ENVIADO", "ENTREGUE", "CANCELADO"]).optional(),
+  status: z.enum(["RECEBIDO", "ACEITO", "EM_PRODUCAO", "PRODUTO_PRONTO", "ENVIADO", "ENTREGUE", "CANCELADO"]).optional(),
   trackingCode: z.string().optional(),
   note: z.string().optional(),
   payment: z.object({
@@ -17,6 +17,11 @@ const updateSchema = z.object({
   }).optional(),
   whatsappMessage: z.string().optional(),
   denyCancel: z.boolean().optional(),
+  productionSteps: z.array(z.object({
+    name: z.string(),
+    done: z.boolean(),
+    doneAt: z.string().optional(),
+  })).optional(),
 });
 
 export async function GET(
@@ -96,6 +101,7 @@ export async function PATCH(
       if (data.status === "CANCELADO") updateData.cancelRequestedAt = null;
     }
     if (data.trackingCode) updateData.trackingCode = data.trackingCode;
+    if (data.productionSteps) updateData.productionSteps = data.productionSteps;
 
     // Nega solicitação de cancelamento
     if (data.denyCancel) updateData.cancelRequestedAt = null;
