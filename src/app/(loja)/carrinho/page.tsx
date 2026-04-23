@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { Trash2, ShoppingBag, ArrowRight } from "lucide-react";
+import { Trash2, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function CarrinhoPage() {
   const { items, removeItem, updateQuantity, total } = useCartStore();
@@ -53,6 +53,19 @@ export default function CarrinhoPage() {
                 )}
                 {item.logoFileName && (
                   <p className="text-xs text-[var(--text-muted)] truncate">📎 {item.logoFileName}</p>
+                )}
+                {(item.selectedColor || item.selectedSize || item.selectedClosure) && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {item.selectedColor && (
+                      <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/60">🎨 {item.selectedColor}</span>
+                    )}
+                    {item.selectedSize && (
+                      <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/60">📐 {item.selectedSize}</span>
+                    )}
+                    {item.selectedClosure && (
+                      <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/60">🔗 {item.selectedClosure}</span>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex items-center justify-between mt-3">
@@ -129,6 +142,11 @@ export default function CarrinhoPage() {
           <Link href="/checkout">
             <Button size="lg" className="w-full">
               Finalizar pedido <ArrowRight size={16} />
+            </Button>
+          </Link>
+          <Link href="/produtos">
+            <Button size="lg" variant="outline" className="w-full mt-3 flex items-center gap-2 justify-center">
+              <ArrowLeft size={16} /> Continuar comprando
             </Button>
           </Link>
         </div>

@@ -18,6 +18,7 @@ interface Product {
   weightGrams: number;
   active: boolean;
   images: string[];
+  colorImages: Record<string, string>;
   availableColors: string[];
   availableSizes: string[];
   availableClosures: string[];
@@ -49,6 +50,7 @@ const emptyForm = {
   allowsCustomization: true,
   mockupType: "capa",
   images: [] as string[],
+  colorImages: {} as Record<string, string>,
   availableColors: "",
   availableSizes: "",
   availableClosures: "",
@@ -104,6 +106,7 @@ export default function AdminProdutosPage() {
       allowsCustomization: true,
       mockupType: (product as any).mockupType ?? "capa",
       images: product.images ?? [],
+      colorImages: (product.colorImages as Record<string, string>) ?? {},
       availableColors: (product.availableColors ?? []).join(", "),
       availableSizes: (product.availableSizes ?? []).join(", "),
       availableClosures: (product.availableClosures ?? []).join(", "),
@@ -138,6 +141,31 @@ export default function AdminProdutosPage() {
     }));
   };
 
+  // Upload de imagem para uma cor específica
+  const handleColorImageUpload = async (color: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setForm((prev) => ({ ...prev, colorImages: { ...prev.colorImages, [color]: data.url } }));
+      } else {
+        alert(data.error ?? "Erro ao enviar imagem.");
+      }
+    } catch {
+      alert("Erro ao enviar imagem.");
+    }
+  };
+
+  const removeColorImage = (color: string) => {
+    setForm((prev) => {
+      const next = { ...prev.colorImages };
+      delete next[color];
+      return { ...prev, colorImages: next };
+    });
+  };
+
   const toArray = (str: string) =>
     str.split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -168,6 +196,7 @@ export default function AdminProdutosPage() {
       allowsCustomization: form.allowsCustomization,
       mockupType: form.mockupType,
       images: form.images,
+      colorImages: form.colorImages,
       availableColors: toArray(form.availableColors),
       availableSizes: toArray(form.availableSizes),
       availableClosures: toArray(form.availableClosures),
@@ -406,7 +435,7 @@ export default function AdminProdutosPage() {
                 <p className="text-sm font-semibold text-[var(--text)] mb-3">Variações disponíveis</p>
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-[var(--text-secondary)]">Cores</label>
+                    <label className="text-sm font-medium text-[var(--text-secondary)]">Cores do tecido</label>
                     <input
                       type="text"
                       placeholder="ex: Preto, Branco, Azul marinho"
@@ -414,6 +443,30 @@ export default function AdminProdutosPage() {
                       onChange={f("availableColors")}
                       className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[var(--gold)]"
                     />
+                    {/* Fotos por cor */}
+                    {toArray(form.availableColors).length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-xs text-[var(--text-muted)] font-medium">📸 Foto de mockup por cor (opcional — substitui o mockup genérico)</p>
+                        {toArray(form.availableColors).map((color) => (
+                          <div key={color} className="flex items-center gap-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5">
+                            <span className="text-sm text-[var(--text-secondary)] min-w-[100px]">{color}</span>
+                            {form.colorImages[color] ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <img src={form.colorImages[color]} alt={color} className="w-10 h-10 object-cover rounded-lg border border-[var(--border)]" />
+                                <span className="text-xs text-green-400 flex-1 truncate">✓ Imagem carregada</span>
+                                <button onClick={() => removeColorImage(color)} className="text-red-400 hover:text-red-300 text-xs">Remover</button>
+                              </div>
+                            ) : (
+                              <label className="flex items-center gap-1.5 text-xs text-[var(--gold)] hover:text-amber-400 cursor-pointer transition-colors">
+                                <Upload size={12} /> Subir foto
+                                <input type="file" accept="image/*" className="hidden"
+                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleColorImageUpload(color, f); }} />
+                              </label>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-[var(--text-secondary)]">Tamanhos</label>

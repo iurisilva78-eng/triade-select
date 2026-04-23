@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { ShoppingCart, Upload, X, Clock, Package, CheckCircle, Eye } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
+import { SizeGuide } from "@/components/produto/SizeGuide";
 
 interface Product {
   id: string;
@@ -27,6 +28,7 @@ interface Product {
   availableColors: string[];
   availableSizes: string[];
   availableClosures: string[];
+  colorImages: Record<string, string>;
   category: { name: string; slug: string };
 }
 
@@ -196,6 +198,7 @@ export default function ProdutoPage() {
               logoFileName={logoFile?.name}
               selectedColor={selectedColor}
               configOverride={mockupConfig}
+              colorImages={product.colorImages}
             />
           ) : product.images[0] ? (
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
@@ -271,7 +274,10 @@ export default function ProdutoPage() {
           {/* Tamanhos */}
           {product.availableSizes?.length > 0 && (
             <div>
-              <p className="text-sm font-semibold text-[var(--text)] mb-2">Tamanho</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-[var(--text)]">Tamanho</p>
+                <SizeGuide />
+              </div>
               <div className="flex flex-wrap gap-2">
                 {product.availableSizes.map((size) => (
                   <button key={size} onClick={() => setSelectedSize(size)}
@@ -442,6 +448,7 @@ export default function ProdutoPage() {
                   logoFileName={logoFile?.name}
                   selectedColor={selectedColor}
                   configOverride={mockupConfig}
+                  colorImages={product.colorImages}
                 />
               </div>
             </div>

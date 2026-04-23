@@ -249,11 +249,21 @@ export default function CheckoutPage() {
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 h-fit">
           <h2 className="font-bold text-[var(--text)] mb-4">Resumo</h2>
 
-          <div className="flex flex-col gap-2 text-sm text-[var(--text-secondary)] mb-4">
+          <div className="flex flex-col gap-3 mb-4">
             {items.map((item) => (
-              <div key={item.productId} className="flex justify-between">
-                <span className="truncate mr-2">{item.name} ×{item.quantity}</span>
-                <span>{formatCurrency(item.unitPrice * item.quantity)}</span>
+              <div key={item.productId} className="flex flex-col gap-0.5">
+                <div className="flex justify-between text-sm">
+                  <span className="truncate mr-2 font-medium text-[var(--text)]">{item.name} ×{item.quantity}</span>
+                  <span className="text-[var(--gold)] font-bold shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                </div>
+                {item.hasCustomization && (
+                  <span className="text-xs text-[var(--gold)]/70">✓ Com personalização</span>
+                )}
+                {(item.selectedColor || item.selectedSize || item.selectedClosure) && (
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {[item.selectedColor, item.selectedSize, item.selectedClosure].filter(Boolean).join(" · ")}
+                  </span>
+                )}
               </div>
             ))}
           </div>

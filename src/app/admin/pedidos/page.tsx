@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_FLOW } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X, MessageCircle, DollarSign, AlertCircle, MapPin } from "lucide-react";
+import { Check, X, MessageCircle, DollarSign, AlertCircle, MapPin, CheckSquare, Square, Layers } from "lucide-react";
 import type { OrderStatus } from "@prisma/client";
 
 interface Order {
@@ -48,6 +48,12 @@ export default function AdminPedidosPage() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Seleção em lote
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<OrderStatus | "">("");
+  const [applyingBulk, setApplyingBulk] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState("");
 
   const load = () => {
     const url = filter === "all" ? "/api/orders" : `/api/orders?status=${filter}`;
@@ -120,6 +126,38 @@ export default function AdminPedidosPage() {
     setNewStatus("CANCELADO");
   };
 
+  const handleBulkApply = async () => {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    setApplyingBulk(true); setBulkMsg("");
+    const res = await fetch("/api/orders/bulk", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selectedIds), status: bulkStatus }),
+    });
+    const data = await res.json();
+    setApplyingBulk(false);
+    if (res.ok) {
+      setBulkMsg(`✓ ${data.updated} pedido(s) atualizados`);
+      setSelectedIds(new Set());
+      setBulkStatus("");
+      load();
+      setTimeout(() => setBulkMsg(""), 4000);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filtered.map((o) => o.id)));
+  };
+
   const filters = ["all", ...ORDER_STATUS_FLOW, "CANCELADO"];
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
   const remaining = selected ? Math.max(0, selected.total - selected.paidAmount) : 0;
@@ -147,6 +185,13 @@ export default function AdminPedidosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)]">
+                <th className="px-4 py-3">
+                  <button onClick={toggleSelectAll} className="text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                    {selectedIds.size === filtered.length && filtered.length > 0
+                      ? <CheckSquare size={16} className="text-[var(--gold)]" />
+                      : <Square size={16} />}
+                  </button>
+                </th>
                 {["Pedido", "Cliente", "Itens", "Total", "Pago", "Status", "Data", "Ação"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
@@ -160,7 +205,12 @@ export default function AdminPedidosPage() {
                 const hasCancelReq = !!order.cancelRequestedAt;
 
                 return (
-                  <tr key={order.id} className={`border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors ${isLate ? "bg-red-500/5" : ""} ${hasCancelReq ? "bg-amber-500/5" : ""}`}>
+                  <tr key={order.id} className={`border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors ${isLate ? "bg-red-500/5" : ""} ${hasCancelReq ? "bg-amber-500/5" : ""} ${selectedIds.has(order.id) ? "bg-[var(--gold)]/5" : ""}`}>
+                    <td className="px-4 py-3">
+                      <button onClick={() => toggleSelect(order.id)} className="text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                        {selectedIds.has(order.id) ? <CheckSquare size={16} className="text-[var(--gold)]" /> : <Square size={16} />}
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-mono font-semibold text-[var(--gold)]">#{order.orderNumber}</p>
                       {isLate && <span className="text-xs text-red-400 font-semibold block">⚠ Atrasado</span>}
@@ -192,6 +242,42 @@ export default function AdminPedidosPage() {
           {filtered.length === 0 && <div className="text-center py-12 text-[var(--text-muted)]">Nenhum pedido encontrado.</div>}
         </div>
       </div>
+
+      {/* ── Barra de ações em lote ── */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[var(--surface)] border border-[var(--gold)]/40 rounded-2xl shadow-2xl px-5 py-4 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Layers size={16} className="text-[var(--gold)]" />
+            <span className="font-semibold text-[var(--text)] text-sm">
+              {selectedIds.size} pedido(s) selecionado(s)
+            </span>
+          </div>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
+            className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--gold)]"
+          >
+            <option value="">Selecione o novo status…</option>
+            {[...ORDER_STATUS_FLOW, "CANCELADO" as OrderStatus].map((s) => (
+              <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleBulkApply}
+            disabled={!bulkStatus || applyingBulk}
+            className="px-4 py-2 bg-[var(--gold)] text-black font-bold rounded-xl text-sm hover:bg-amber-400 transition-colors disabled:opacity-40"
+          >
+            {applyingBulk ? "Aplicando…" : "Aplicar em lote"}
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-[var(--text-muted)] hover:text-[var(--text)] text-sm"
+          >
+            Cancelar
+          </button>
+          {bulkMsg && <span className="text-green-400 text-sm font-medium">{bulkMsg}</span>}
+        </div>
+      )}
 
       {/* Modal */}
       {selected && (

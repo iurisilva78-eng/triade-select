@@ -2,264 +2,175 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_FLOW } from "@/types";
-import { Badge } from "@/components/ui/badge";
-import { Check, Clock, Package, Truck, MapPin, XCircle } from "lucide-react";
+import { CheckCircle, ShoppingBag, ArrowRight, Clock, MessageCircle } from "lucide-react";
+import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/types";
+import type { OrderStatus } from "@prisma/client";
+
+interface OrderItem {
+  quantity: number;
+  unitPrice: number;
+  hasCustomization: boolean;
+  logoFileName?: string;
+  selectedColor?: string;
+  selectedSize?: string;
+  selectedClosure?: string;
+  product: { name: string };
+}
 
 interface Order {
   id: string;
   orderNumber: string;
-  status: string;
-  paymentStatus: string;
-  total: number;
+  status: OrderStatus;
   subtotal: number;
   freightCost: number;
+  total: number;
   paidAmount: number;
-  trackingCode?: string;
   shippingService?: string;
-  street: string;
-  number: string;
-  complement?: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  cep: string;
   createdAt: string;
-  items: {
-    id: string;
-    quantity: number;
-    unitPrice: number;
-    hasCustomization: boolean;
-    logoFileName?: string;
-    product: { name: string; images: string[] };
-  }[];
-  statusHistory: { status: string; note?: string; createdAt: string }[];
+  items: OrderItem[];
 }
 
-const STATUS_ICONS: Record<string, React.ReactNode> = {
-  RECEBIDO: <Package size={16} />,
-  ACEITO: <Check size={16} />,
-  EM_PRODUCAO: <Clock size={16} />,
-  ENVIADO: <Truck size={16} />,
-  ENTREGUE: <Check size={16} />,
-};
+const NEXT_STEPS = [
+  { icon: "💳", title: "Realize o pagamento mínimo (50%)", desc: "Faça o PIX ou transferência. O comprovante pode ser enviado pelo WhatsApp." },
+  { icon: "📲", title: "Confirmação pelo WhatsApp", desc: "Assim que identificarmos o pagamento, você receberá uma mensagem confirmando." },
+  { icon: "⚙️", title: "Produção em ~15 dias úteis", desc: "Sua peça é produzida com cuidado após confirmação do pagamento." },
+  { icon: "📦", title: "Envio com rastreamento", desc: "Você será avisado pelo WhatsApp com o código de rastreio quando o pedido sair." },
+];
 
-export default function PedidoPage() {
+export default function PedidoSucessoPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: session } = useSession();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cancelLoading, setCancelLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (session) {
-      fetch(`/api/orders/${id}`)
-        .then((r) => r.json())
-        .then((data) => { setOrder(data); setLoading(false); });
-    }
-  }, [id, session]);
-
-  const handleCancelRequest = async () => {
-    if (!order) return;
-    if (!confirm("Deseja solicitar o cancelamento deste pedido? A Triade Select analisará e confirmará em breve.")) return;
-    setCancelLoading(true);
-    const res = await fetch(`/api/orders/${order.id}/cancel-request`, { method: "POST" });
-    const data = await res.json();
-    setCancelLoading(false);
-    if (!res.ok) { alert(data.error ?? "Erro ao solicitar cancelamento."); return; }
-    setOrder((prev) => prev ? { ...prev, cancelRequestedAt: new Date().toISOString() } as any : prev);
-  };
+    fetch(`/api/orders/${id}`)
+      .then((r) => r.json())
+      .then((data) => { if (data.error) setError(data.error); else setOrder(data); })
+      .catch(() => setError("Erro ao carregar pedido."))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (!order) {
-    return <div className="text-center py-20 text-[var(--text-muted)]">Pedido não encontrado.</div>;
+  if (error || !order) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-20 text-center">
+        <p className="text-red-400 text-lg font-semibold mb-4">Pedido não encontrado.</p>
+        <Link href="/pedidos" className="text-[var(--gold)] hover:underline">Ver meus pedidos</Link>
+      </div>
+    );
   }
 
-  const statusColor = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
-  const statusLabel = ORDER_STATUS_LABELS[order.status as keyof typeof ORDER_STATUS_LABELS];
-  const currentStep = ORDER_STATUS_FLOW.indexOf(order.status as any);
-  const minimumPayment = order.total * 0.5;
+  const minimum = order.total * 0.5;
+  const remaining = Math.max(0, order.total - order.paidAmount);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Pedido #{order.orderNumber}</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">{formatDate(order.createdAt)}</p>
-        </div>
-        <Badge color={statusColor}>{statusLabel}</Badge>
-      </div>
+    <div className="max-w-2xl mx-auto px-4 py-10">
 
-      {/* Barra de progresso */}
-      {order.status !== "CANCELADO" && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
-          <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-4">Acompanhamento</h2>
-          <div className="flex items-center justify-between relative">
-            {/* Linha de progresso */}
-            <div className="absolute top-4 left-4 right-4 h-0.5 bg-[var(--border)]" />
-            <div
-              className="absolute top-4 left-4 h-0.5 bg-[var(--gold)] transition-all duration-500"
-              style={{ width: currentStep > 0 ? `${(currentStep / (ORDER_STATUS_FLOW.length - 1)) * 100}%` : "0%" }}
-            />
-
-            {ORDER_STATUS_FLOW.map((step, idx) => {
-              const done = idx <= currentStep;
-              const active = idx === currentStep;
-              const color = ORDER_STATUS_COLORS[step];
-              return (
-                <div key={step} className="flex flex-col items-center gap-1 z-10">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-                      done
-                        ? "bg-[var(--gold)] border-[var(--gold)] text-black"
-                        : "bg-[var(--bg)] border-[var(--border)] text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {STATUS_ICONS[step]}
-                  </div>
-                  <p
-                    className={`text-xs font-medium text-center max-w-[60px] leading-tight ${
-                      active ? "text-[var(--gold)]" : done ? "text-[var(--text-secondary)]" : "text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {ORDER_STATUS_LABELS[step]}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+      {/* Sucesso */}
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-green-500/40">
+          <CheckCircle size={42} className="text-green-400" />
         </div>
-      )}
-
-      {/* Rastreio */}
-      {order.trackingCode && (
-        <div className="bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-2xl p-4 mb-6">
-          <p className="text-sm font-semibold text-[var(--gold)] mb-1">
-            <Truck size={14} className="inline mr-1" /> Código de rastreio
-          </p>
-          <p className="text-lg font-mono font-bold text-[var(--text)]">{order.trackingCode}</p>
-          <a
-            href={`https://rastreamento.correios.com.br/app/index.php`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-[var(--gold)] hover:underline mt-1 block"
-          >
-            Rastrear nos Correios →
-          </a>
-        </div>
-      )}
-
-      {/* Pagamento */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
-        <h2 className="font-bold text-[var(--text)] mb-3">Pagamento</h2>
-        <div className="flex flex-col gap-2 text-sm">
-          <div className="flex justify-between text-[var(--text-secondary)]">
-            <span>Subtotal</span>
-            <span>{formatCurrency(order.subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-[var(--text-secondary)]">
-            <span>Frete ({order.shippingService})</span>
-            <span>{formatCurrency(order.freightCost)}</span>
-          </div>
-          <div className="flex justify-between font-bold text-[var(--text)] text-base pt-2 border-t border-[var(--border)]">
-            <span>Total</span>
-            <span className="text-[var(--gold)]">{formatCurrency(order.total)}</span>
-          </div>
-          <div className="flex justify-between text-[var(--text-secondary)]">
-            <span>Pago</span>
-            <span className="text-green-400">{formatCurrency(order.paidAmount)}</span>
-          </div>
-          <div className="flex justify-between text-amber-300 font-medium">
-            <span>Mínimo para produção (50%)</span>
-            <span>{formatCurrency(minimumPayment)}</span>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold text-[var(--text)] mb-1">Pedido realizado!</h1>
+        <p className="text-[var(--text-secondary)]">
+          Pedido <span className="font-bold text-[var(--gold)]">#{order.orderNumber}</span> recebido com sucesso.
+        </p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">{formatDate(order.createdAt)}</p>
       </div>
 
       {/* Itens */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
-        <h2 className="font-bold text-[var(--text)] mb-3">Itens do pedido</h2>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-4">
+        <h2 className="font-bold text-[var(--text)] mb-4 flex items-center gap-2">
+          <ShoppingBag size={16} className="text-[var(--gold)]" /> Itens do pedido
+        </h2>
         <div className="flex flex-col gap-3">
-          {order.items.map((item) => (
-            <div key={item.id} className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[var(--surface-2)] rounded-xl flex items-center justify-center text-xl overflow-hidden flex-shrink-0">
-                {item.product.images[0] ? (
-                  <img src={item.product.images[0]} alt="" className="w-full h-full object-cover" />
-                ) : "🧣"}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-[var(--text)] text-sm">{item.product.name}</p>
-                {item.hasCustomization && (
-                  <p className="text-xs text-[var(--gold)]">✓ Com personalização</p>
+          {order.items.map((item, i) => (
+            <div key={i} className="flex items-start justify-between gap-3 pb-3 last:pb-0 border-b border-[var(--border)] last:border-0">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[var(--text)] text-sm">{item.product.name} ×{item.quantity}</p>
+                {item.hasCustomization && <span className="text-xs text-[var(--gold)]/80">✓ Com personalização</span>}
+                {(item.selectedColor || item.selectedSize || item.selectedClosure) && (
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    {[item.selectedColor, item.selectedSize, item.selectedClosure].filter(Boolean).join(" · ")}
+                  </p>
                 )}
-                {item.logoFileName && (
-                  <p className="text-xs text-[var(--text-muted)]">📎 {item.logoFileName}</p>
-                )}
+                {item.logoFileName && <p className="text-xs text-[var(--text-muted)]">📎 {item.logoFileName}</p>}
               </div>
-              <div className="text-right">
-                <p className="text-xs text-[var(--text-muted)]">×{item.quantity}</p>
-                <p className="font-bold text-[var(--gold)] text-sm">
-                  {formatCurrency(item.unitPrice * item.quantity)}
-                </p>
+              <span className="font-bold text-[var(--gold)] shrink-0 text-sm">{formatCurrency(item.unitPrice * item.quantity)}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Totais */}
+        <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-1.5 text-sm">
+          <div className="flex justify-between text-[var(--text-secondary)]">
+            <span>Subtotal</span><span>{formatCurrency(order.subtotal)}</span>
+          </div>
+          <div className="flex justify-between text-[var(--text-secondary)]">
+            <span>Frete {order.shippingService ? `(${order.shippingService})` : ""}</span>
+            <span>{formatCurrency(order.freightCost)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-base pt-2 border-t border-[var(--border)]">
+            <span className="text-[var(--text)]">Total</span>
+            <span className="text-[var(--gold)]">{formatCurrency(order.total)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pagamento mínimo */}
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 mb-4">
+        <h2 className="font-bold text-amber-300 mb-1">💳 Valor mínimo para iniciar produção</h2>
+        <p className="text-3xl font-bold text-amber-300">{formatCurrency(minimum)}</p>
+        <p className="text-xs text-amber-400 mt-1">50% do total — necessário para darmos início</p>
+        {remaining > 0 && (
+          <p className="text-xs text-amber-400 mt-0.5">Saldo restante após produção: {formatCurrency(remaining)}</p>
+        )}
+      </div>
+
+      {/* Próximos passos */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-4">
+        <h2 className="font-bold text-[var(--text)] mb-4 flex items-center gap-2">
+          <Clock size={16} className="text-[var(--gold)]" /> Próximos passos
+        </h2>
+        <div className="flex flex-col gap-4">
+          {NEXT_STEPS.map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[var(--surface-2)] border border-[var(--border)] rounded-full flex items-center justify-center shrink-0 text-base">
+                {step.icon}
+              </div>
+              <div>
+                <p className="font-semibold text-[var(--text)] text-sm">{step.title}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{step.desc}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Cancelamento */}
-      {["RECEBIDO", "ACEITO"].includes(order.status) && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6">
-          {(order as any).cancelRequestedAt ? (
-            <div className="flex items-start gap-3">
-              <XCircle size={18} className="text-amber-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-semibold text-amber-400 text-sm">Cancelamento solicitado</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  Sua solicitação foi recebida. A equipe analisará e entrará em contato.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-semibold text-[var(--text)] text-sm">Precisa cancelar?</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">Disponível antes de entrar em produção.</p>
-              </div>
-              <button
-                onClick={handleCancelRequest}
-                disabled={cancelLoading}
-                className="flex items-center gap-2 px-4 py-2 border border-red-500/40 text-red-400 text-sm font-medium rounded-xl hover:bg-red-500/10 transition-colors disabled:opacity-50"
-              >
-                <XCircle size={14} />
-                {cancelLoading ? "Solicitando..." : "Solicitar cancelamento"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Endereço */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
-        <h2 className="font-bold text-[var(--text)] mb-2 flex items-center gap-2">
-          <MapPin size={16} className="text-[var(--gold)]" /> Endereço de entrega
-        </h2>
-        <p className="text-sm text-[var(--text-secondary)]">
-          {order.street}, {order.number}
-          {order.complement ? `, ${order.complement}` : ""} — {order.neighborhood}
-          <br />
-          {order.city}/{order.state} — CEP {order.cep}
+      {/* CTA - Meus Pedidos */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 text-center">
+        <MessageCircle size={32} className="text-[var(--gold)] mx-auto mb-2" />
+        <h2 className="font-bold text-[var(--text)] mb-1">Acompanhe seu pedido</h2>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
+          Veja o status, histórico de atualizações e todos os detalhes em{" "}
+          <strong className="text-[var(--text)]">Meus Pedidos</strong>. Todas as atualizações também chegam pelo WhatsApp 📲
         </p>
+        <Link
+          href="/pedidos"
+          className="inline-flex items-center gap-2 bg-[var(--gold)] text-black font-bold px-6 py-3 rounded-xl hover:bg-amber-400 transition-colors"
+        >
+          Ver meus pedidos <ArrowRight size={16} />
+        </Link>
       </div>
     </div>
   );

@@ -116,6 +116,7 @@ model Product {
   active              Boolean  @default(true)
   mockupType          String   @default("capa")
   images              String[]
+  colorImages         Json     @default("{}")
   availableColors     String[]
   availableSizes      String[]
   availableClosures   String[]

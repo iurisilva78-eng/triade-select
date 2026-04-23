@@ -9,22 +9,32 @@ interface MockupPreviewProps {
   selectedColor?: string;
   /** Sobrescreve a config padrão (usado pelo editor admin e pela página do produto) */
   configOverride?: Record<string, MockupTypeConfig>;
+  /** Imagens específicas por cor { "Preto": "url", "Azul": "url" } */
+  colorImages?: Record<string, string>;
 }
 
 export function MockupPreview({
   mockupType,
   logoPreview,
   logoFileName,
+  selectedColor,
   configOverride,
+  colorImages,
 }: MockupPreviewProps) {
   const configMap = configOverride ?? DEFAULT_MOCKUP_CONFIG;
   const config = configMap[mockupType] ?? DEFAULT_MOCKUP_CONFIG["capa"];
 
+  // Imagem de fundo: usa a foto da cor específica se existir, senão o mockup genérico
+  const colorKey = selectedColor ?? "";
+  const bgImage = (colorImages && colorKey && colorImages[colorKey])
+    ? colorImages[colorKey]
+    : config.image;
+
   return (
     <div className="relative w-full h-full">
-      {/* Imagem base do produto */}
+      {/* Imagem base do produto (cor específica ou mockup genérico) */}
       <img
-        src={config.image}
+        src={bgImage}
         alt="Mockup do produto"
         className="w-full h-full object-contain"
         onError={(e) => {
