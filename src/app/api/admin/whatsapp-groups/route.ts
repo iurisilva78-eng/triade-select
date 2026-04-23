@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getWhatsAppConfig } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -10,43 +11,39 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
-  const apiUrl = process.env.WHATSAPP_API_URL;
-  const clientToken = process.env.WHATSAPP_CLIENT_TOKEN;
-
-  if (!apiUrl) {
-    return NextResponse.json({ error: "WHATSAPP_API_URL não configurado." }, { status: 400 });
-  }
-
-  // Deriva a URL base: remove o endpoint final (/send-text)
-  const base = apiUrl.replace(/\/[^/]+$/, "");
-  const groupsUrl = `${base}/groups`;
+  const cfg = await getWhatsAppConfig();
 
   try {
-    const res = await fetch(groupsUrl, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(clientToken ? { "Client-Token": clientToken } : {}),
-      },
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return NextResponse.json({ error: `Erro Z-API: ${res.status} — ${text}` }, { status: 502 });
+    if (cfg.provider === "evolution") {
+      if (!cfg.evoBaseUrl || !cfg.evoInstance || !cfg.evoApiKey) {
+        return NextResponse.json({ error: "Evolution API não configurada." }, { status: 400 });
+      }
+      const res = await fetch(
+        `${cfg.evoBaseUrl}/group/fetchAllGroups/${cfg.evoInstance}?getParticipants=false`,
+        { headers: { apikey: cfg.evoApiKey } }
+      );
+      if (!res.ok) return NextResponse.json({ error: `Erro Evolution API: ${res.status}` }, { status: 502 });
+      const data = await res.json();
+      const groups = Array.isArray(data) ? data : [];
+      return NextResponse.json(
+        groups.map((g: any) => ({ id: g.id, name: g.subject ?? g.id }))
+      );
     }
 
+    // Z-API
+    if (!cfg.zapiUrl) return NextResponse.json({ error: "WhatsApp não configurado." }, { status: 400 });
+    const base = cfg.zapiUrl.replace(/\/[^/]+$/, "");
+    const res = await fetch(`${base}/groups`, {
+      headers: { "Content-Type": "application/json", ...(cfg.zapiClientToken ? { "Client-Token": cfg.zapiClientToken } : {}) },
+    });
+    if (!res.ok) return NextResponse.json({ error: `Erro Z-API: ${res.status}` }, { status: 502 });
     const data = await res.json();
-
-    // Z-API retorna array de grupos com { phone, name, ... }
     const groups = Array.isArray(data) ? data : (data.groups ?? data.data ?? []);
-
-    const list = groups.map((g: any) => ({
-      id: g.phone ?? g.id ?? g.groupId,
-      name: g.name ?? g.subject ?? g.phone,
-    })).filter((g: any) => g.id);
-
-    return NextResponse.json(list);
+    return NextResponse.json(
+      groups.map((g: any) => ({ id: g.phone ?? g.id, name: g.name ?? g.subject ?? g.phone })).filter((g: any) => g.id)
+    );
   } catch (err) {
-    console.error("Erro ao buscar grupos Z-API:", err);
-    return NextResponse.json({ error: "Erro ao conectar com Z-API." }, { status: 500 });
+    console.error("[whatsapp-groups]", err);
+    return NextResponse.json({ error: "Erro ao buscar grupos." }, { status: 500 });
   }
 }
