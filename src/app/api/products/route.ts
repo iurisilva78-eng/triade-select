@@ -19,7 +19,7 @@ const productSchema = z.object({
   allowsCustomization: z.boolean().default(true),
   mockupType: z.string().default("capa"),
   images: z.array(z.string()).default([]),
-  colorImages: z.record(z.string()).default({}),
+  colorImages: z.record(z.string(), z.string()).default({}),
   availableColors: z.array(z.string()).default([]),
   availableSizes: z.array(z.string()).default([]),
   availableClosures: z.array(z.string()).default([]),
