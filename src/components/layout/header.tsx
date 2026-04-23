@@ -14,11 +14,11 @@ export function Header() {
   const user = session?.user as any;
 
   return (
-    <header className="sticky top-0 z-50 bg-[var(--bg)]/95 backdrop-blur border-b border-[var(--border)]">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-[var(--border)] shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center p-1 shadow-sm">
+          <div className="w-9 h-9 rounded-xl bg-[var(--gold)]/10 border border-[var(--gold)]/20 flex items-center justify-center p-1">
             <img src="/logo.png" alt="Triade Select" className="w-full h-full object-contain" onError={(e)=>{(e.target as HTMLImageElement).src="/logo.svg"}} />
           </div>
           <span className="font-bold text-lg text-[var(--text)]">

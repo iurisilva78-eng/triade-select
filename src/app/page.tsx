@@ -34,26 +34,28 @@ export default async function HomePage() {
 
       {/* Hero */}
       <section
-        className="flex items-center justify-center px-4 py-10 md:py-20 text-center relative overflow-hidden min-h-[calc(100dvh-64px)]"
+        className="flex items-center justify-center px-4 py-8 md:py-20 text-center relative overflow-hidden min-h-[calc(100dvh-64px)]"
         style={cfg.hero_image ? {
           backgroundImage: `url(${cfg.hero_image})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-        } : undefined}
+        } : {
+          background: "radial-gradient(ellipse 80% 50% at 50% -5%, rgba(184,146,42,0.10) 0%, transparent 65%)",
+        }}
       >
         {cfg.hero_image && (
-          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-black/55" />
         )}
         <div className="max-w-3xl relative z-10 w-full">
           {cfg.hero_badge && (
-            <div className="inline-flex items-center gap-2 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-full px-4 py-1.5 text-sm text-[var(--gold)] font-medium mb-4 md:mb-6">
+            <div className="hidden sm:inline-flex items-center gap-2 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-full px-4 py-1.5 text-sm text-[var(--gold)] font-semibold mb-4 md:mb-6">
               {cfg.hero_badge}
             </div>
           )}
-          <h1 className="text-3xl md:text-6xl font-bold text-[var(--text)] leading-tight mb-3 md:mb-5">
+          <h1 className="text-[clamp(1.6rem,6vw,3.75rem)] font-bold text-[var(--text)] leading-tight mb-2 md:mb-5">
             {cfg.hero_title}
           </h1>
-          <p className="text-base md:text-lg text-[var(--text-secondary)] mb-6 md:mb-8 max-w-xl mx-auto">
+          <p className="text-sm md:text-lg text-[var(--text-secondary)] mb-5 md:mb-8 max-w-xl mx-auto leading-relaxed">
             {cfg.hero_subtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -72,15 +74,15 @@ export default async function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="border-t border-[var(--border)] py-16 px-4">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="border-t border-[var(--border)] bg-[var(--surface)] py-16 px-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="text-center">
               <div className="w-12 h-12 rounded-2xl bg-[var(--gold)]/10 border border-[var(--gold)]/20 flex items-center justify-center mx-auto mb-3">
                 <Icon size={20} className="text-[var(--gold)]" />
               </div>
-              <h3 className="font-semibold text-[var(--text)] mb-1">{title}</h3>
-              <p className="text-sm text-[var(--text-secondary)]">{desc}</p>
+              <h3 className="font-semibold text-[var(--text)] mb-1 text-sm md:text-base">{title}</h3>
+              <p className="text-xs md:text-sm text-[var(--text-secondary)]">{desc}</p>
             </div>
           ))}
         </div>

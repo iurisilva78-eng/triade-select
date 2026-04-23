@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-60 bg-[var(--surface)] border-r border-[var(--border)] p-4">
         <Link href="/admin" className="flex items-center gap-2.5 mb-8 px-2">
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center p-1 shadow-sm">
+          <div className="w-9 h-9 rounded-xl bg-[var(--gold)]/10 border border-[var(--gold)]/20 flex items-center justify-center p-1">
             <LogoImg />
           </div>
           <span className="font-bold text-[var(--text)]">Admin</span>
