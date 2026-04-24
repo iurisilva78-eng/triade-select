@@ -19,24 +19,32 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 cursor-pointer select-none whitespace-nowrap",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
+          // Base editorial
+          "inline-flex items-center justify-center gap-2 font-semibold",
+          "tracking-[0.04em] uppercase text-[13px]",
+          "border transition-all duration-200 cursor-pointer select-none whitespace-nowrap",
+          "disabled:opacity-40 disabled:cursor-not-allowed",
+          "rounded-[var(--r-sm)]",
           {
-            // variants
-            "bg-[var(--gold)] text-black hover:bg-[var(--gold-light)] active:bg-[var(--gold-dark)] shadow-lg shadow-[var(--gold)]/20":
+            // Primary — preto sólido, hover inverte
+            "bg-[var(--ink)] text-[var(--bg)] border-[var(--ink)] hover:bg-transparent hover:text-[var(--ink)]":
               variant === "primary",
-            "bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)] border border-[var(--border)]":
+            // Secondary — cinza quente
+            "bg-[var(--bg-2)] text-[var(--ink)] border-[var(--border)] hover:bg-[var(--border)]":
               variant === "secondary",
-            "bg-transparent text-[var(--gold)] border border-[var(--gold)] hover:bg-[var(--gold)]/10":
+            // Outline — borda preta, hover preenche
+            "bg-transparent text-[var(--ink)] border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)]":
               variant === "outline",
-            "bg-transparent text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]":
+            // Ghost — sem borda
+            "bg-transparent text-[var(--muted)] border-transparent hover:text-[var(--ink)] tracking-normal normal-case text-sm":
               variant === "ghost",
-            "bg-red-600 text-white hover:bg-red-500":
+            // Danger
+            "bg-red-600 text-white border-red-600 hover:bg-red-700":
               variant === "danger",
-            // sizes
-            "text-sm px-3 py-2": size === "sm",
-            "text-base px-5 py-3": size === "md",
-            "text-lg px-7 py-4": size === "lg",
+            // Sizes
+            "px-[18px] py-[11px] text-[11px]": size === "sm",
+            "px-[26px] py-[14px]":             size === "md",
+            "px-[32px] py-[18px]":             size === "lg",
           },
           className
         )}

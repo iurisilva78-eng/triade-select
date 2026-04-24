@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { ShoppingBag, LogOut, Settings, Menu, X, User } from "lucide-react";
+import { LogOut, Settings, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
-import { Button } from "@/components/ui/button";
+
+/* ── Triângulo duplo da marca ──────────────────────────── */
+function TriangleMark({ size = 26, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
+      <polygon points="50,8 90,80 10,80" stroke={color} strokeWidth="5" fill="none" strokeLinejoin="round" />
+      <polygon points="50,28 78,75 22,75" stroke={color} strokeWidth="4" fill="none" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function Header() {
   const { data: session } = useSession();
@@ -14,84 +23,70 @@ export function Header() {
   const user = session?.user as any;
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-[var(--border)] shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
+    <header className="sticky top-0 z-50" style={{ background: "color-mix(in oklab, var(--bg) 92%, transparent)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-hair)" }}>
+      <div className="max-w-[1440px] mx-auto px-5 md:px-8 h-[68px] flex items-center justify-between">
+
+        {/* Wordmark */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[var(--gold)]/10 border border-[var(--gold)]/20 flex items-center justify-center p-1">
-            <img src="/logo.png" alt="Triade Select" className="w-full h-full object-contain" onError={(e)=>{(e.target as HTMLImageElement).src="/logo.svg"}} />
-          </div>
-          <span className="font-bold text-lg text-[var(--text)]">
-            Triade <span className="text-[var(--gold)]">Select</span>
+          <TriangleMark size={26} color="var(--gold)" />
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 17, letterSpacing: "0.02em", lineHeight: 1 }}>
+            TRIADE <span style={{ fontStyle: "italic", fontWeight: 300, color: "var(--gold)" }}>select</span>
           </span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6">
-          <Link
-            href="/produtos"
-            className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors text-sm font-medium"
-          >
+        <nav className="hidden md:flex items-center gap-8 text-[13px] tracking-[0.02em]">
+          <Link href="/produtos" className="text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
             Produtos
           </Link>
           {session && (
             <>
-              <Link href="/pedidos" className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors text-sm font-medium">
+              <Link href="/pedidos" className="text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
                 Meus Pedidos
               </Link>
-              <Link href="/conta" className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors text-sm font-medium flex items-center gap-1">
+              <Link href="/conta" className="text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors flex items-center gap-1">
                 <User size={13} /> Minha Conta
               </Link>
             </>
           )}
           {user?.role === "ADMIN" && (
-            <Link
-              href="/admin"
-              className="text-[var(--gold)] hover:text-[var(--gold-light)] transition-colors text-sm font-medium flex items-center gap-1"
-            >
-              <Settings size={14} /> Admin
+            <Link href="/admin" className="text-[var(--gold)] hover:text-[var(--gold-dark)] transition-colors flex items-center gap-1">
+              <Settings size={13} /> Admin
             </Link>
           )}
         </nav>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3">
-          {/* Carrinho */}
-          <Link href="/carrinho" className="relative p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors">
-            <ShoppingBag size={20} className="text-[var(--text-secondary)]" />
-            {itemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[var(--gold)] text-black text-[10px] font-bold rounded-full flex items-center justify-center">
-                {itemCount > 9 ? "9+" : itemCount}
-              </span>
-            )}
-          </Link>
-
+        {/* Direita — sacola + login */}
+        <div className="flex items-center gap-4">
           {session ? (
-            <div className="hidden md:flex items-center gap-3">
-              <span className="text-sm text-[var(--text-secondary)]">
-                Olá, {session.user?.name?.split(" ")[0]}
-              </span>
-              <button
-                onClick={() => signOut()}
-                className="p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)] hover:text-[var(--text)]"
-              >
-                <LogOut size={18} />
+            <div className="hidden md:flex items-center gap-4 text-[13px] tracking-[0.02em]">
+              <span className="text-[var(--muted)]">Olá, {session.user?.name?.split(" ")[0]}</span>
+              <button onClick={() => signOut()} className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                <LogOut size={16} />
               </button>
             </div>
           ) : (
-            <div className="hidden md:flex items-center gap-2">
-              <Link href="/login">
-                <Button variant="ghost" size="sm">Entrar</Button>
+            <div className="hidden md:flex items-center gap-5 text-[13px] tracking-[0.04em] uppercase font-medium">
+              <Link href="/login" className="text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
+                Entrar
               </Link>
-              <Link href="/cadastro">
-                <Button size="sm">Cadastrar</Button>
+              <Link href="/cadastro" className="text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
+                Cadastrar
               </Link>
             </div>
           )}
 
-          {/* Mobile menu */}
+          {/* Sacola */}
+          <Link href="/carrinho" className="flex items-center gap-1.5 text-[13px] tracking-[0.04em] uppercase font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors">
+            Sacola
+            <span className="t-mono text-[11px] text-[var(--muted)]">
+              ({String(itemCount).padStart(2, "0")})
+            </span>
+          </Link>
+
+          {/* Mobile menu toggle */}
           <button
-            className="md:hidden p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors"
+            className="md:hidden text-[var(--ink)] p-1"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -101,38 +96,29 @@ export function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t border-[var(--border)] bg-[var(--surface)] px-4 py-4 flex flex-col gap-3">
-          <Link href="/produtos" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--text-secondary)] font-medium">
-            Produtos
-          </Link>
+        <div
+          className="md:hidden px-5 py-5 flex flex-col gap-4 text-[15px] font-medium"
+          style={{ borderTop: "1px solid var(--line-soft)", background: "var(--bg)" }}
+        >
+          <Link href="/produtos" onClick={() => setMenuOpen(false)} className="text-[var(--ink)]">Produtos</Link>
           {session && (
             <>
-              <Link href="/pedidos" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--text-secondary)] font-medium">
-                Meus Pedidos
-              </Link>
-              <Link href="/conta" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--text-secondary)] font-medium">
-                Minha Conta
-              </Link>
+              <Link href="/pedidos" onClick={() => setMenuOpen(false)} className="text-[var(--ink)]">Meus Pedidos</Link>
+              <Link href="/conta" onClick={() => setMenuOpen(false)} className="text-[var(--ink)]">Minha Conta</Link>
             </>
           )}
           {user?.role === "ADMIN" && (
-            <Link href="/admin" onClick={() => setMenuOpen(false)} className="py-2 text-[var(--gold)] font-medium">
-              Painel Admin
-            </Link>
+            <Link href="/admin" onClick={() => setMenuOpen(false)} className="text-[var(--gold)]">Painel Admin</Link>
           )}
-          <div className="pt-2 border-t border-[var(--border)] flex flex-col gap-2">
+          <div style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
             {session ? (
-              <Button variant="ghost" onClick={() => { signOut(); setMenuOpen(false); }}>
-                <LogOut size={16} /> Sair
-              </Button>
+              <button onClick={() => { signOut(); setMenuOpen(false); }} className="text-[var(--muted)] text-left text-sm flex items-center gap-2">
+                <LogOut size={15} /> Sair
+              </button>
             ) : (
               <>
-                <Link href="/login" onClick={() => setMenuOpen(false)}>
-                  <Button variant="outline" className="w-full">Entrar</Button>
-                </Link>
-                <Link href="/cadastro" onClick={() => setMenuOpen(false)}>
-                  <Button className="w-full">Cadastrar</Button>
-                </Link>
+                <Link href="/login" onClick={() => setMenuOpen(false)} className="text-[var(--ink-soft)]">Entrar</Link>
+                <Link href="/cadastro" onClick={() => setMenuOpen(false)} className="text-[var(--ink)]">Cadastrar</Link>
               </>
             )}
           </div>
