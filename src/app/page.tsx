@@ -23,7 +23,7 @@ async function getFeaturedProducts() {
       where: { active: true },
       take: 4,
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, slug: true, price: true, images: true },
+      select: { id: true, name: true, slug: true, priceBase: true, images: true },
     });
   } catch {
     return [];
@@ -227,7 +227,7 @@ export default async function HomePage() {
                     >
                       {p.name}
                     </div>
-                    <div className="text-sm font-medium shrink-0">{formatCurrency(p.price)}</div>
+                    <div className="text-sm font-medium shrink-0">{formatCurrency(p.priceBase)}</div>
                   </div>
                   <div className="t-eyebrow mt-1.5" style={{ fontSize: 9 }}>
                     15 dias · personalizável

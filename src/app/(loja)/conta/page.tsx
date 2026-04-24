@@ -1,23 +1,46 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Check, Eye, EyeOff, User, Phone, Lock, Save } from "lucide-react";
+import { Check } from "lucide-react";
+
+/* ─── Tab sidebar navigation ─────────────────────── */
+const TABS = [
+  { id: "perfil",     label: "Perfil" },
+  { id: "seguranca",  label: "Segurança" },
+  { id: "enderecos",  label: "Endereços" },
+  { id: "sair",       label: "Sair" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+
+/* ─── Shared input style ───────────────────────────── */
+const fieldStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "14px 0",
+  border: 0,
+  borderBottom: "1px solid var(--line-soft)",
+  background: "transparent",
+  fontFamily: "var(--font-sans)",
+  fontSize: 15,
+  outline: "none",
+  color: "var(--ink)",
+  boxSizing: "border-box",
+};
 
 export default function ContaPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [tab, setTab] = useState<TabId>("perfil");
 
-  const [name, setName]                   = useState("");
-  const [phone, setPhone]                 = useState("");
+  // Profile state
+  const [name, setName]   = useState("");
+  const [phone, setPhone] = useState("");
+
+  // Password state
   const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword]     = useState("");
+  const [newPassword, setNewPassword]         = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrent, setShowCurrent]     = useState(false);
-  const [showNew, setShowNew]             = useState(false);
 
   const [saving, setSaving]   = useState(false);
   const [success, setSuccess] = useState("");
@@ -30,8 +53,8 @@ export default function ContaPage() {
   useEffect(() => {
     if (session) {
       fetch("/api/user/profile")
-        .then(r => r.json())
-        .then(data => {
+        .then((r) => r.json())
+        .then((data) => {
           if (data.name)  setName(data.name);
           if (data.phone) setPhone(data.phone);
         });
@@ -40,14 +63,19 @@ export default function ContaPage() {
 
   const handleSave = async () => {
     setError(""); setSuccess("");
-    if (newPassword && newPassword !== confirmPassword) {
+    if (tab === "seguranca" && newPassword && newPassword !== confirmPassword) {
       setError("As senhas não conferem."); return;
     }
     setSaving(true);
-    const res = await fetch("/api/user/profile", {
+    const body: Record<string, string | undefined> = { name, phone };
+    if (tab === "seguranca") {
+      body.currentPassword = currentPassword || undefined;
+      body.newPassword     = newPassword || undefined;
+    }
+    const res  = await fetch("/api/user/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, currentPassword: currentPassword || undefined, newPassword: newPassword || undefined }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     setSaving(false);
@@ -57,102 +85,301 @@ export default function ContaPage() {
     setTimeout(() => setSuccess(""), 4000);
   };
 
+  const handleTabClick = (id: TabId) => {
+    if (id === "sair") { signOut({ callbackUrl: "/" }); return; }
+    setTab(id);
+    setError(""); setSuccess("");
+  };
+
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin" />
+      <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 32, height: 32, border: "2px solid var(--line-soft)", borderTop: "2px solid var(--gold)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       </div>
     );
   }
 
+  const firstName = name.split(" ")[0] || session?.user?.name?.split(" ")[0] || "você";
+
   return (
-    <div className="max-w-lg mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-[var(--text)] mb-2">Minha Conta</h1>
-      <p className="text-[var(--text-secondary)] text-sm mb-8">Edite seus dados pessoais e senha.</p>
+    <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
+      {/* Page hero */}
+      <section style={{ padding: "40px 32px 32px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          <p className="t-eyebrow mb-3">— Minha conta</p>
+          <h1
+            className="t-display"
+            style={{ fontSize: "clamp(48px,7vw,72px)", margin: 0, lineHeight: 0.95 }}
+          >
+            Olá,{" "}
+            <span className="t-display-italic" style={{ color: "var(--gold)" }}>
+              {firstName}
+            </span>
+            .
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 12 }}>
+            {session?.user?.email}
+          </p>
+        </div>
+      </section>
 
-      {/* Dados pessoais */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-5">
-        <div className="flex items-center gap-2 mb-4">
-          <User size={16} className="text-[var(--gold)]" />
-          <h2 className="font-bold text-[var(--text)]">Dados pessoais</h2>
-        </div>
-        <div className="flex flex-col gap-4">
-          <Input label="Nome completo" value={name} onChange={e => setName(e.target.value)} />
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
-              <Phone size={13} /> WhatsApp (com DDD)
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value.replace(/\D/g, ""))}
-              maxLength={13}
-              placeholder="11999999999"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)]"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Content */}
+      <section style={{ padding: "0 32px 96px" }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "220px 1fr",
+            gap: 64,
+          }}
+          className="max-md:grid-cols-1 max-md:gap-8"
+        >
+          {/* Sidebar */}
+          <aside>
+            <nav
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                borderTop: "1px solid var(--line-soft)",
+              }}
+            >
+              {TABS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => handleTabClick(id)}
+                  style={{
+                    padding: "18px 0",
+                    textAlign: "left",
+                    borderBottom: "1px solid var(--line-soft)",
+                    background: "transparent",
+                    border: 0,
+                    borderBottomColor: "var(--line-soft)",
+                    borderBottomStyle: "solid",
+                    borderBottomWidth: 1,
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 14,
+                    fontWeight: tab === id ? 600 : 400,
+                    color: tab === id ? "var(--ink)" : "var(--muted)",
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    transition: "color 0.15s",
+                  }}
+                >
+                  {label}
+                  <span style={{ color: tab === id ? "var(--ink)" : "var(--line-soft)" }}>→</span>
+                </button>
+              ))}
+            </nav>
+          </aside>
 
-      {/* Alterar senha */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Lock size={16} className="text-[var(--gold)]" />
-          <h2 className="font-bold text-[var(--text)]">Alterar senha</h2>
-        </div>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Deixe em branco para não alterar.</p>
-        <div className="flex flex-col gap-4">
-          <div className="relative">
-            <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">Senha atual</label>
-            <input
-              type={showCurrent ? "text" : "password"}
-              value={currentPassword}
-              onChange={e => setCurrentPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] pr-11"
-            />
-            <button onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 bottom-3 text-[var(--text-muted)] hover:text-[var(--text)]">
-              {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          <div className="relative">
-            <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">Nova senha</label>
-            <input
-              type={showNew ? "text" : "password"}
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] pr-11"
-            />
-            <button onClick={() => setShowNew(!showNew)} className="absolute right-3 bottom-3 text-[var(--text-muted)] hover:text-[var(--text)]">
-              {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
+          {/* Main content */}
           <div>
-            <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">Confirmar nova senha</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              className={`w-full bg-[var(--surface-2)] border rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] ${confirmPassword && newPassword !== confirmPassword ? "border-red-500/50 text-red-400" : "border-[var(--border)] text-[var(--text)]"}`}
-            />
+            {/* ── Perfil ── */}
+            {tab === "perfil" && (
+              <div>
+                <h2
+                  className="t-display"
+                  style={{ fontSize: 40, margin: "0 0 28px", lineHeight: 0.95 }}
+                >
+                  Perfil
+                </h2>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 28,
+                    maxWidth: 640,
+                  }}
+                  className="max-sm:grid-cols-1"
+                >
+                  <div>
+                    <p className="t-eyebrow mb-1.5">Nome completo</p>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Seu nome"
+                      style={fieldStyle}
+                    />
+                  </div>
+                  <div>
+                    <p className="t-eyebrow mb-1.5">WhatsApp</p>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                      maxLength={13}
+                      placeholder="11999999999"
+                      style={fieldStyle}
+                    />
+                  </div>
+                  <div>
+                    <p className="t-eyebrow mb-1.5">E-mail</p>
+                    <input
+                      value={session?.user?.email ?? ""}
+                      disabled
+                      style={{ ...fieldStyle, color: "var(--muted)", cursor: "not-allowed" }}
+                    />
+                  </div>
+                </div>
+
+                {error   && <p style={{ fontSize: 13, color: "#c0392b", marginTop: 16 }}>{error}</p>}
+                {success && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#27ae60", marginTop: 16 }}>
+                    <Check size={14} /> {success}
+                  </div>
+                )}
+
+                <div style={{ marginTop: 32, display: "flex", gap: 12 }}>
+                  <SaveButton loading={saving} onClick={handleSave} />
+                </div>
+              </div>
+            )}
+
+            {/* ── Segurança ── */}
+            {tab === "seguranca" && (
+              <div>
+                <h2
+                  className="t-display"
+                  style={{ fontSize: 40, margin: "0 0 28px", lineHeight: 0.95 }}
+                >
+                  Segurança
+                </h2>
+                <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 28 }}>
+                  Deixe os campos em branco para não alterar a senha.
+                </p>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 28,
+                    maxWidth: 640,
+                  }}
+                  className="max-sm:grid-cols-1"
+                >
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <p className="t-eyebrow mb-1.5">Senha atual</p>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      style={fieldStyle}
+                    />
+                  </div>
+                  <div>
+                    <p className="t-eyebrow mb-1.5">Nova senha</p>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      style={fieldStyle}
+                    />
+                  </div>
+                  <div>
+                    <p className="t-eyebrow mb-1.5">Confirmar nova senha</p>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repita a senha"
+                      style={fieldStyle}
+                    />
+                  </div>
+                </div>
+
+                {error   && <p style={{ fontSize: 13, color: "#c0392b", marginTop: 16 }}>{error}</p>}
+                {success && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#27ae60", marginTop: 16 }}>
+                    <Check size={14} /> {success}
+                  </div>
+                )}
+
+                <div style={{ marginTop: 32 }}>
+                  <SaveButton loading={saving} onClick={handleSave} label="Atualizar senha" />
+                </div>
+              </div>
+            )}
+
+            {/* ── Endereços ── */}
+            {tab === "enderecos" && (
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: 28,
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}
+                >
+                  <h2
+                    className="t-display"
+                    style={{ fontSize: 40, margin: 0, lineHeight: 0.95 }}
+                  >
+                    Endereços
+                  </h2>
+                  <button
+                    style={{
+                      padding: "10px 20px",
+                      background: "transparent",
+                      color: "var(--ink)",
+                      border: "1px solid var(--ink)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      borderRadius: "var(--r-sm)",
+                    }}
+                  >
+                    + Novo endereço
+                  </button>
+                </div>
+                <p style={{ fontSize: 14, color: "var(--muted)" }}>
+                  Gerencie seus endereços de entrega aqui.
+                </p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm mb-4">{error}</div>
-      )}
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-green-400 text-sm mb-4 flex items-center gap-2">
-          <Check size={14} /> {success}
-        </div>
-      )}
-
-      <Button size="lg" className="w-full flex items-center gap-2" onClick={handleSave} loading={saving}>
-        <Save size={16} /> Salvar alterações
-      </Button>
+      </section>
     </div>
+  );
+}
+
+function SaveButton({
+  loading,
+  onClick,
+  label = "Salvar alterações",
+}: {
+  loading: boolean;
+  onClick: () => void;
+  label?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      style={{
+        padding: "16px 32px",
+        background: loading ? "var(--muted)" : "var(--ink)",
+        color: "var(--bg)",
+        border: "1px solid var(--ink)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        cursor: loading ? "not-allowed" : "pointer",
+        borderRadius: "var(--r-sm)",
+        transition: "background 0.2s",
+      }}
+    >
+      {loading ? "Salvando…" : label}
+    </button>
   );
 }

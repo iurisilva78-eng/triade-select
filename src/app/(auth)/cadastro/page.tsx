@@ -4,8 +4,15 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
+function TriangleMark({ size = 22, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
+      <polygon points="50,8 90,80 10,80" stroke={color} strokeWidth="5" fill="none" strokeLinejoin="round" />
+      <polygon points="50,28 78,75 22,75" stroke={color} strokeWidth="4" fill="none" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -30,7 +37,6 @@ export default function CadastroPage() {
       setError("As senhas não conferem.");
       return;
     }
-
     if (form.password.length < 6) {
       setError("Senha deve ter pelo menos 6 caracteres.");
       return;
@@ -51,7 +57,6 @@ export default function CadastroPage() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error ?? "Erro ao cadastrar.");
         setLoading(false);
@@ -72,81 +77,207 @@ export default function CadastroPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--gold)] flex items-center justify-center mx-auto mb-4">
-            <span className="text-black font-bold text-2xl">T</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Criar conta</h1>
-          <p className="text-[var(--text-secondary)] mt-1">Comece a fazer pedidos hoje mesmo</p>
-        </div>
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 0",
+    border: 0,
+    borderBottom: "1px solid var(--line-soft)",
+    background: "transparent",
+    fontFamily: "var(--font-sans)",
+    fontSize: 15,
+    outline: "none",
+    color: "var(--ink)",
+    boxSizing: "border-box",
+  };
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <Input
-              label="Nome completo"
-              placeholder="Seu nome"
-              value={form.name}
-              onChange={set("name")}
-              required
-              autoComplete="name"
-            />
-            <Input
-              label="E-mail"
-              type="email"
-              placeholder="seu@email.com"
-              value={form.email}
-              onChange={set("email")}
-              required
-              autoComplete="email"
-            />
-            <Input
-              label="WhatsApp"
-              type="tel"
-              placeholder="(11) 99999-9999"
-              value={form.phone}
-              onChange={set("phone")}
-              required
-              helper="Usado para envio de atualizações do pedido"
-            />
-            <Input
-              label="Senha"
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              value={form.password}
-              onChange={set("password")}
-              required
-              autoComplete="new-password"
-            />
-            <Input
-              label="Confirmar senha"
-              type="password"
-              placeholder="Repita a senha"
-              value={form.confirmPassword}
-              onChange={set("confirmPassword")}
-              required
-              autoComplete="new-password"
-            />
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--bg)",
+        color: "var(--ink)",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+      }}
+      className="max-md:grid-cols-1"
+    >
+      {/* Left: form */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 32px",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: 440 }}>
+          <p className="t-eyebrow mb-4">— Cadastro</p>
+          <h1
+            className="t-display"
+            style={{ fontSize: "clamp(40px,5vw,56px)", margin: "0 0 10px", lineHeight: 0.95 }}
+          >
+            Crie sua
+            <br />
+            <span className="t-display-italic" style={{ color: "var(--gold)" }}>
+              conta
+            </span>
+            .
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", margin: "0 0 36px" }}>
+            Receba novidades, pedidos e acesso B2B.
+          </p>
+
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: 20 }}
+          >
+            <div>
+              <p className="t-eyebrow mb-1.5">Nome completo</p>
+              <input
+                placeholder="Seu nome"
+                value={form.name}
+                onChange={set("name")}
+                required
+                autoComplete="name"
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <p className="t-eyebrow mb-1.5">E-mail</p>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={form.email}
+                onChange={set("email")}
+                required
+                autoComplete="email"
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <p className="t-eyebrow mb-1.5">WhatsApp</p>
+              <input
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={form.phone}
+                onChange={set("phone")}
+                required
+                autoComplete="tel"
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <p className="t-eyebrow mb-1.5">Senha</p>
+              <input
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={form.password}
+                onChange={set("password")}
+                required
+                autoComplete="new-password"
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <p className="t-eyebrow mb-1.5">Confirmar senha</p>
+              <input
+                type="password"
+                placeholder="Repita a senha"
+                value={form.confirmPassword}
+                onChange={set("confirmPassword")}
+                required
+                autoComplete="new-password"
+                style={inputStyle}
+              />
+            </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">
-                {error}
-              </div>
+              <p style={{ fontSize: 13, color: "#c0392b", margin: 0 }}>{error}</p>
             )}
 
-            <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
-              Criar conta
-            </Button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                marginTop: 8,
+                padding: "16px 32px",
+                background: loading ? "var(--muted)" : "var(--ink)",
+                color: "var(--bg)",
+                border: "1px solid var(--ink)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                cursor: loading ? "not-allowed" : "pointer",
+                borderRadius: "var(--r-sm)",
+              }}
+            >
+              {loading ? "Criando conta…" : "Criar conta"}
+            </button>
           </form>
 
-          <p className="text-center text-[var(--text-secondary)] text-sm mt-4">
+          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 24, textAlign: "center" }}>
             Já tem conta?{" "}
-            <Link href="/login" className="text-[var(--gold)] hover:text-[var(--gold-light)] font-semibold">
+            <Link
+              href="/login"
+              style={{
+                color: "var(--ink)",
+                borderBottom: "1px solid var(--ink)",
+                textDecoration: "none",
+              }}
+            >
               Entrar
             </Link>
           </p>
+        </div>
+      </div>
+
+      {/* Right: editorial image panel */}
+      <div
+        className="mockup-bg grain relative overflow-hidden hidden md:block"
+        style={{ minHeight: "100vh" }}
+      >
+        <img
+          src="/mockups/camiseta-dupla.png"
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            mixBlendMode: "multiply",
+          }}
+        />
+        {/* Wordmark top-right */}
+        <div className="absolute top-10 right-10 flex items-center gap-2.5">
+          <TriangleMark size={22} color="var(--gold)" />
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 500,
+              fontSize: 16,
+              letterSpacing: "0.02em",
+            }}
+          >
+            TRIADE <span style={{ fontStyle: "italic", fontWeight: 300, color: "var(--gold)" }}>select</span>
+          </span>
+        </div>
+        {/* Quote bottom-left */}
+        <div className="absolute bottom-10 left-10 right-10">
+          <p className="t-eyebrow mb-4">— Programa B2B</p>
+          <div
+            className="t-display"
+            style={{ fontSize: "clamp(28px,3vw,44px)", lineHeight: 0.95 }}
+          >
+            Condições{" "}
+            <span className="t-display-italic" style={{ color: "var(--gold)" }}>
+              especiais
+            </span>{" "}
+            para barbearias cadastradas.
+          </div>
         </div>
       </div>
     </div>

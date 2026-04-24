@@ -2,155 +2,396 @@
 
 import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
-import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { Trash2, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function CarrinhoPage() {
   const { items, removeItem, updateQuantity, total } = useCartStore();
 
   if (items.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <ShoppingBag size={64} className="mx-auto text-[var(--text-muted)] mb-4" />
-        <h1 className="text-2xl font-bold text-[var(--text)] mb-2">Carrinho vazio</h1>
-        <p className="text-[var(--text-secondary)] mb-6">Adicione produtos para continuar.</p>
-        <Link href="/produtos">
-          <Button size="lg">Ver produtos</Button>
-        </Link>
+      <div
+        style={{
+          background: "var(--bg)",
+          color: "var(--ink)",
+          minHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 24,
+          padding: "80px 32px",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <p className="t-eyebrow mb-4">— Sacola vazia</p>
+          <h1
+            className="t-display"
+            style={{ fontSize: "clamp(36px,5vw,56px)", margin: "0 0 16px", lineHeight: 0.95 }}
+          >
+            Sua{" "}
+            <span className="t-display-italic" style={{ color: "var(--gold)" }}>
+              sacola
+            </span>{" "}
+            está vazia.
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 40 }}>
+            Adicione produtos para continuar.
+          </p>
+          <Link href="/produtos">
+            <button
+              style={{
+                padding: "16px 32px",
+                background: "var(--ink)",
+                color: "var(--bg)",
+                border: "1px solid var(--ink)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                borderRadius: "var(--r-sm)",
+              }}
+            >
+              Explorar coleção →
+            </button>
+          </Link>
+        </div>
       </div>
     );
   }
 
+  const sub = total();
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-[var(--text)] mb-6">
-        Carrinho ({items.length} {items.length === 1 ? "item" : "itens"})
-      </h1>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Itens */}
-        <div className="md:col-span-2 flex flex-col gap-4">
-          {items.map((item) => (
-            <div
-              key={item.productId}
-              className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 flex gap-4"
+    <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
+      <section style={{ padding: "32px 32px 96px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          {/* Title */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              marginBottom: 40,
+              flexWrap: "wrap",
+              gap: 12,
+            }}
+          >
+            <h1
+              className="t-display"
+              style={{ fontSize: "clamp(48px,7vw,72px)", margin: 0, lineHeight: 0.95 }}
             >
-              {/* Imagem */}
-              <div className="w-20 h-20 bg-[var(--surface-2)] rounded-xl flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
-                {item.image ? (
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-xl" />
-                ) : (
-                  "🧣"
-                )}
-              </div>
+              Sua{" "}
+              <span className="t-display-italic">sacola</span>
+            </h1>
+            <p className="t-eyebrow">
+              {items.length} {items.length === 1 ? "item" : "itens"}
+            </p>
+          </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[var(--text)]">{item.name}</p>
-                {item.hasCustomization && (
-                  <p className="text-xs text-[var(--gold)] mt-0.5">✓ Com personalização</p>
-                )}
-                {item.logoFileName && (
-                  <p className="text-xs text-[var(--text-muted)] truncate">📎 {item.logoFileName}</p>
-                )}
-                {(item.selectedColor || item.selectedSize || item.selectedClosure) && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {item.selectedColor && (
-                      <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/60">🎨 {item.selectedColor}</span>
-                    )}
-                    {item.selectedSize && (
-                      <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/60">📐 {item.selectedSize}</span>
-                    )}
-                    {item.selectedClosure && (
-                      <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/60">🔗 {item.selectedClosure}</span>
-                    )}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)",
+              gap: 64,
+            }}
+            className="max-md:grid-cols-1 max-md:gap-10"
+          >
+            {/* Items list */}
+            <div>
+              {items.map((item, idx) => (
+                <div
+                  key={item.productId}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "120px 1fr auto",
+                    gap: 24,
+                    padding: "28px 0",
+                    borderTop: "1px solid var(--line-soft)",
+                    borderBottom:
+                      idx === items.length - 1 ? "1px solid var(--line-soft)" : undefined,
+                    alignItems: "start",
+                  }}
+                  className="max-sm:grid-cols-1"
+                >
+                  {/* Image */}
+                  <div
+                    className="mockup-bg"
+                    style={{ aspectRatio: "3/4", overflow: "hidden", flexShrink: 0 }}
+                  >
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          mixBlendMode: "multiply",
+                        }}
+                      />
+                    ) : null}
                   </div>
-                )}
 
-                <div className="flex items-center justify-between mt-3">
-                  {/* Quantidade */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                      className="w-7 h-7 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-sm font-bold hover:border-[var(--gold)] transition-colors flex items-center justify-center"
+                  {/* Info */}
+                  <div>
+                    <p className="t-eyebrow mb-1.5">{item.productId.slice(0, 8).toUpperCase()}</p>
+                    <div
+                      className="t-display"
+                      style={{ fontSize: 24, marginBottom: 10, lineHeight: 1.1 }}
                     >
-                      −
-                    </button>
-                    <span className="w-7 text-center text-sm font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                      className="w-7 h-7 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-sm font-bold hover:border-[var(--gold)] transition-colors flex items-center justify-center"
-                    >
-                      +
-                    </button>
+                      {item.name}
+                    </div>
+
+                    {/* Attributes */}
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6, lineHeight: 1.8 }}>
+                      {item.selectedColor && (
+                        <span>
+                          Cor: <span style={{ color: "var(--ink)" }}>{item.selectedColor}</span>
+                          {(item.selectedSize || item.selectedClosure) && " · "}
+                        </span>
+                      )}
+                      {item.selectedSize && (
+                        <span>
+                          Tamanho: <span style={{ color: "var(--ink)" }}>{item.selectedSize}</span>
+                          {item.selectedClosure && " · "}
+                        </span>
+                      )}
+                      {item.selectedClosure && (
+                        <span>
+                          Fechamento: <span style={{ color: "var(--ink)" }}>{item.selectedClosure}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {item.hasCustomization && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "var(--gold)",
+                          marginBottom: 12,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        ✦ Personalização com logo
+                      </div>
+                    )}
+
+                    {/* Qty + remove */}
+                    <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 20 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          border: "1px solid var(--line-soft)",
+                          alignItems: "center",
+                        }}
+                      >
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            border: 0,
+                            background: "transparent",
+                            cursor: "pointer",
+                            fontSize: 16,
+                            color: "var(--ink)",
+                          }}
+                        >
+                          −
+                        </button>
+                        <div
+                          className="t-mono"
+                          style={{ width: 36, textAlign: "center", fontSize: 13 }}
+                        >
+                          {item.quantity}
+                        </div>
+                        <button
+                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            border: 0,
+                            background: "transparent",
+                            cursor: "pointer",
+                            fontSize: 16,
+                            color: "var(--ink)",
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => removeItem(item.productId)}
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.14em",
+                          textTransform: "uppercase",
+                          color: "var(--muted)",
+                          background: "transparent",
+                          border: 0,
+                          borderBottom: "1px solid var(--line-soft)",
+                          padding: "2px 0",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Remover
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <p className="font-bold text-[var(--gold)]">
-                      {formatCurrency(item.unitPrice * item.quantity)}
-                    </p>
-                    <button
-                      onClick={() => removeItem(item.productId)}
-                      className="text-[var(--text-muted)] hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  {/* Price */}
+                  <div
+                    className="t-display"
+                    style={{ fontSize: 22, textAlign: "right", whiteSpace: "nowrap" }}
+                  >
+                    {formatCurrency(item.unitPrice * item.quantity)}
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Sidebar summary */}
+            <aside style={{ position: "sticky", top: 100, alignSelf: "start" }}>
+              <div style={{ border: "1px solid var(--line-soft)", padding: 32 }}>
+                <h2
+                  className="t-display"
+                  style={{ fontSize: 28, margin: "0 0 24px" }}
+                >
+                  Resumo
+                </h2>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                  {items.map((item) => (
+                    <div
+                      key={item.productId}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 13,
+                        color: "var(--muted)",
+                      }}
+                    >
+                      <span style={{ marginRight: 8 }}>
+                        {item.name} × {item.quantity}
+                      </span>
+                      <span style={{ flexShrink: 0 }}>
+                        {formatCurrency(item.unitPrice * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    color: "var(--muted)",
+                    paddingBottom: 8,
+                  }}
+                >
+                  <span>Frete</span>
+                  <span>Calculado no checkout</span>
+                </div>
+
+                <hr style={{ border: 0, borderTop: "1px solid var(--line-hair)", margin: "16px 0" }} />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: 28,
+                  }}
+                >
+                  <p className="t-eyebrow">Total estimado</p>
+                  <div className="t-display" style={{ fontSize: 32 }}>
+                    {formatCurrency(sub)}
+                  </div>
+                </div>
+
+                <Link href="/checkout">
+                  <button
+                    style={{
+                      width: "100%",
+                      padding: "16px 24px",
+                      background: "var(--ink)",
+                      color: "var(--bg)",
+                      border: "1px solid var(--ink)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      borderRadius: "var(--r-sm)",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Finalizar pedido →
+                  </button>
+                </Link>
+
+                <Link href="/produtos">
+                  <button
+                    style={{
+                      width: "100%",
+                      padding: "14px 24px",
+                      background: "transparent",
+                      color: "var(--muted)",
+                      border: "1px solid var(--line-soft)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      borderRadius: "var(--r-sm)",
+                    }}
+                  >
+                    ← Continuar comprando
+                  </button>
+                </Link>
+
+                {/* Gold info bar */}
+                <div
+                  style={{
+                    marginTop: 24,
+                    padding: 16,
+                    background: "var(--bg-2)",
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 1,
+                      minHeight: 36,
+                      background: "var(--gold)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "var(--ink-soft)",
+                      margin: 0,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <strong>Entrada de 50%</strong> inicia a produção.
+                    Saldo cobrado ao envio. Prazo médio de 15 dias úteis.
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            </aside>
+          </div>
         </div>
-
-        {/* Resumo */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 h-fit">
-          <h2 className="font-bold text-[var(--text)] mb-4">Resumo do pedido</h2>
-
-          <div className="flex flex-col gap-2 text-sm mb-4">
-            {items.map((item) => (
-              <div key={item.productId} className="flex justify-between text-[var(--text-secondary)]">
-                <span className="truncate mr-2">
-                  {item.name} × {item.quantity}
-                </span>
-                <span className="flex-shrink-0">{formatCurrency(item.unitPrice * item.quantity)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-[var(--border)] pt-3 mb-1">
-            <div className="flex justify-between text-sm text-[var(--text-secondary)]">
-              <span>Subtotal</span>
-              <span>{formatCurrency(total())}</span>
-            </div>
-            <div className="flex justify-between text-xs text-[var(--text-muted)] mt-1">
-              <span>Frete</span>
-              <span>Calculado no checkout</span>
-            </div>
-          </div>
-
-          <div className="flex justify-between font-bold text-[var(--text)] text-lg mt-3 mb-5">
-            <span>Total</span>
-            <span className="text-[var(--gold)]">{formatCurrency(total())}</span>
-          </div>
-
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-5 text-xs text-amber-300">
-            💡 Mínimo de <strong>50%</strong> para iniciar a produção.
-            Prazo: ~15 dias úteis.
-          </div>
-
-          <Link href="/checkout">
-            <Button size="lg" className="w-full">
-              Finalizar pedido <ArrowRight size={16} />
-            </Button>
-          </Link>
-          <Link href="/produtos">
-            <Button size="lg" variant="outline" className="w-full mt-3 flex items-center gap-2 justify-center">
-              <ArrowLeft size={16} /> Continuar comprando
-            </Button>
-          </Link>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

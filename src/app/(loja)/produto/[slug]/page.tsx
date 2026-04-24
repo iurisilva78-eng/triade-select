@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cartStore";
 import { formatCurrency } from "@/lib/utils";
-import { ShoppingCart, Upload, X, Clock, Package, CheckCircle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
 import { SizeGuide } from "@/components/produto/SizeGuide";
@@ -32,29 +31,70 @@ interface Product {
   category: { name: string; slug: string };
 }
 
+const COLOR_MAP: Record<string, string> = {
+  "preto": "#1a1a1a", "branco": "#f5f5f0", "branco off-white": "#f0ebe0",
+  "cinza": "#8a8a8a", "cinza claro": "#c8c8c8", "cinza escuro": "#3d3d3d",
+  "azul": "#1e40af", "azul marinho": "#0d1b3e", "azul royal": "#2563eb",
+  "azul claro": "#60a5fa", "azul petróleo": "#164e63",
+  "verde": "#15803d", "verde militar": "#4a5c2e", "verde escuro": "#14532d",
+  "vermelho": "#dc2626", "bordo": "#7f1d1d", "vinho": "#881337",
+  "rosa": "#ec4899", "rosa claro": "#fbcfe8", "roxo": "#7c3aed",
+  "laranja": "#ea580c", "amarelo": "#eab308",
+  "bege": "#d4b896", "marrom": "#92400e", "caqui": "#c3a882",
+  "dourado": "#b8860b", "prata": "#b0b0b0",
+};
+const getColorCss = (name: string) => COLOR_MAP[name.toLowerCase()] ?? name;
+
+/* ─── Chip selector ────────────────────────────────── */
+function Chip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "12px 20px",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        letterSpacing: "0.1em",
+        border: `1px solid ${active ? "var(--ink)" : "var(--line-soft)"}`,
+        background: active ? "var(--ink)" : "transparent",
+        color: active ? "var(--bg)" : "var(--ink)",
+        cursor: "pointer",
+        borderRadius: "var(--r-sm)",
+        transition: "background 0.15s, border-color 0.15s",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function ProdutoPage() {
   const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
-  const addItem = useCartStore((s) => s.addItem);
+  const router   = useRouter();
+  const addItem  = useCartStore((s) => s.addItem);
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [product, setProduct]               = useState<Product | null>(null);
+  const [loading, setLoading]               = useState(true);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity]             = useState(1);
   const [hasCustomization, setHasCustomization] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedClosure, setSelectedClosure] = useState<string>("");
-
-  // Modal de confirmação do mockup
+  const [logoFile, setLogoFile]             = useState<File | null>(null);
+  const [logoPreview, setLogoPreview]       = useState<string | null>(null);
+  const [notes, setNotes]                   = useState("");
+  const [adding, setAdding]                 = useState(false);
+  const [selectedColor, setSelectedColor]   = useState("");
+  const [selectedSize, setSelectedSize]     = useState("");
+  const [selectedClosure, setSelectedClosure] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-  // Config de posição dos mockups (carregada do admin)
-  const [mockupConfig, setMockupConfig] = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
+  const [mockupConfig, setMockupConfig]     = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
 
   useEffect(() => {
     fetch("/api/admin/mockup-config")
@@ -63,21 +103,6 @@ export default function ProdutoPage() {
       .catch(() => {});
   }, []);
 
-  // Mapeamento de nomes de cores em português → CSS
-  const COLOR_MAP: Record<string, string> = {
-    "preto": "#1a1a1a", "branco": "#f5f5f0", "branco off-white": "#f0ebe0",
-    "cinza": "#8a8a8a", "cinza claro": "#c8c8c8", "cinza escuro": "#3d3d3d",
-    "azul": "#1e40af", "azul marinho": "#0d1b3e", "azul royal": "#2563eb",
-    "azul claro": "#60a5fa", "azul petróleo": "#164e63",
-    "verde": "#15803d", "verde militar": "#4a5c2e", "verde escuro": "#14532d",
-    "vermelho": "#dc2626", "bordo": "#7f1d1d", "vinho": "#881337",
-    "rosa": "#ec4899", "rosa claro": "#fbcfe8", "roxo": "#7c3aed",
-    "laranja": "#ea580c", "amarelo": "#eab308",
-    "bege": "#d4b896", "marrom": "#92400e", "caqui": "#c3a882",
-    "dourado": "#b8860b", "prata": "#b0b0b0",
-  };
-  const getColorCss = (name: string) => COLOR_MAP[name.toLowerCase()] ?? name;
-
   useEffect(() => {
     fetch(`/api/products?slug=${slug}`)
       .then((r) => r.json())
@@ -85,7 +110,7 @@ export default function ProdutoPage() {
         if (data && !data.error) {
           setProduct(data);
           if (data.availableColors?.length) setSelectedColor(data.availableColors[0]);
-          if (data.availableSizes?.length) setSelectedSize(data.availableSizes[0]);
+          if (data.availableSizes?.length)  setSelectedSize(data.availableSizes[0]);
           if (data.availableClosures?.length) setSelectedClosure(data.availableClosures[0]);
         } else {
           setProduct(null);
@@ -104,40 +129,29 @@ export default function ProdutoPage() {
     setLogoFile(file);
     if (file.type !== "application/pdf") {
       const reader = new FileReader();
-      reader.onload = (e) => setLogoPreview(e.target?.result as string);
+      reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
     } else {
       setLogoPreview(null);
     }
   };
 
-  // Ao clicar "Adicionar ao carrinho":
-  // - Se tem personalização com logo → abre modal de confirmação
-  // - Caso contrário → adiciona direto
   const handleAddToCartClick = () => {
     if (!product) return;
-    if (hasCustomization && !logoFile) {
-      alert("Por favor, envie o logotipo para continuar.");
-      return;
-    }
-    if (hasCustomization && logoFile) {
-      setShowConfirmModal(true);
-      return;
-    }
+    if (hasCustomization && !logoFile) { alert("Por favor, envie o logotipo para continuar."); return; }
+    if (hasCustomization && logoFile)  { setShowConfirmModal(true); return; }
     confirmAddToCart();
   };
 
-  // Upload e adição ao carrinho após confirmação
   const confirmAddToCart = async () => {
     if (!product) return;
     setAdding(true);
     let logoUrl = "";
-
     if (logoFile) {
       const formData = new FormData();
       formData.append("file", logoFile);
       try {
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const res  = await fetch("/api/upload", { method: "POST", body: formData });
         const data = await res.json();
         logoUrl = data.url ?? "";
       } catch {
@@ -146,49 +160,41 @@ export default function ProdutoPage() {
         return;
       }
     }
-
-    // Usa a foto da cor selecionada se disponível, senão a primeira imagem do produto
-    const colorKey = selectedColor?.toLowerCase();
-    const cartImage =
-      (colorKey && product.colorImages?.[colorKey])
-        ? product.colorImages[colorKey]
-        : (colorKey && product.colorImages?.[selectedColor])
-        ? product.colorImages[selectedColor]
-        : product.images[currentImageIdx] ?? product.images[0] ?? "";
+    const colorKey  = selectedColor?.toLowerCase();
+    const cartImage = (colorKey && product.colorImages?.[colorKey])
+      ? product.colorImages[colorKey]
+      : (colorKey && product.colorImages?.[selectedColor])
+      ? product.colorImages[selectedColor]
+      : product.images[currentImageIdx] ?? product.images[0] ?? "";
 
     addItem({
-      productId: product.id,
-      name: product.name,
-      image: cartImage,
-      quantity,
+      productId: product.id, name: product.name, image: cartImage, quantity,
       unitPrice: hasCustomization ? product.priceWithCustom : product.priceBase,
-      hasCustomization,
-      logoUrl: logoUrl || undefined,
-      logoFileName: logoFile?.name,
-      notes: notes || undefined,
+      hasCustomization, logoUrl: logoUrl || undefined,
+      logoFileName: logoFile?.name, notes: notes || undefined,
       selectedColor: selectedColor || undefined,
       selectedSize: selectedSize || undefined,
       selectedClosure: selectedClosure || undefined,
     });
-
     setAdding(false);
     setShowConfirmModal(false);
     router.push("/carrinho");
   };
 
+  /* ── Loading / not found ── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="w-8 h-8 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, background: "var(--bg)" }}>
+        <div style={{ width: 32, height: 32, border: "2px solid var(--line-soft)", borderTop: "2px solid var(--gold)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="text-center py-20 text-[var(--text-muted)]">
-        <p className="text-5xl mb-4">🔍</p>
-        <p>Produto não encontrado.</p>
+      <div style={{ textAlign: "center", padding: "80px 32px", background: "var(--bg)", color: "var(--ink)" }}>
+        <p className="t-eyebrow mb-4">— Produto não encontrado</p>
+        <p style={{ fontSize: 14, color: "var(--muted)" }}>Verifique o endereço ou volte para a loja.</p>
       </div>
     );
   }
@@ -196,314 +202,498 @@ export default function ProdutoPage() {
   const price = hasCustomization ? product.priceWithCustom : product.priceBase;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="grid md:grid-cols-2 gap-10">
-
-        {/* ── Imagem / Mockup ── */}
-        <div className="flex flex-col gap-3">
-          <div className="aspect-square bg-[var(--surface)] rounded-2xl border border-[var(--border)] overflow-hidden relative">
-            {hasCustomization && (logoPreview || logoFile) ? (
-              <MockupPreview
-                mockupType={product.mockupType ?? "capa"}
-                logoPreview={logoPreview}
-                logoFileName={logoFile?.name}
-                selectedColor={selectedColor}
-                configOverride={mockupConfig}
-                colorImages={product.colorImages}
-              />
-            ) : product.images.length > 0 ? (
-              <>
-                <img
-                  src={product.images[currentImageIdx] ?? product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-                {/* Setas de navegação (só se tiver mais de 1 imagem) */}
-                {product.images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentImageIdx((i) => (i - 1 + product.images.length) % product.images.length)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button
-                      onClick={() => setCurrentImageIdx((i) => (i + 1) % product.images.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                    {/* Dots */}
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                      {product.images.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentImageIdx(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIdx ? "bg-[var(--gold)] w-4" : "bg-white/50"}`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="w-full h-full relative bg-[#111]">
-                <img
-                  src={`/mockups/${product.mockupType ?? "capa"}.png`}
-                  alt={product.name}
-                  className="w-full h-full object-contain opacity-80"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-                <div className="absolute inset-0 flex items-end justify-center pb-4">
-                  <p className="text-xs text-white/40 bg-black/30 px-3 py-1 rounded-full">
-                    Adicione uma logo para ver a prévia personalizada
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Badge "Prévia ao vivo" quando logo está carregada */}
-            {hasCustomization && logoFile && (
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-[var(--gold)] text-black text-[10px] font-bold px-2.5 py-1 rounded-full">
-                <Eye size={10} /> Prévia ao vivo
-              </div>
-            )}
-          </div>
-
-          {/* Thumbnails */}
-          {product.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {product.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentImageIdx(idx)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                    idx === currentImageIdx ? "border-[var(--gold)]" : "border-[var(--border)] opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Detalhes ── */}
-        <div className="flex flex-col gap-5">
-          <div>
-            <p className="text-xs text-[var(--gold)] font-medium uppercase tracking-wider mb-1">
-              {product.category.name}
-            </p>
-            <h1 className="text-2xl font-bold text-[var(--text)]">{product.name}</h1>
-            <p className="text-[var(--text-secondary)] mt-2">{product.description}</p>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-              <Clock size={14} className="text-[var(--gold)]" />
-              {product.productionDays} dias úteis
-            </div>
-            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-              <Package size={14} className="text-[var(--gold)]" />
-              {(product.weightGrams / 1000).toFixed(2)} kg
-            </div>
-          </div>
-
-          {/* Cores */}
-          {product.availableColors?.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold text-[var(--text)] mb-2">Cor do tecido</p>
-              <div className="flex flex-wrap gap-2.5">
-                {product.availableColors.map((color) => (
-                  <button key={color} onClick={() => setSelectedColor(color)} title={color}
-                    className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 ${
-                      selectedColor === color
-                        ? "border-[var(--gold)] scale-110 ring-2 ring-[var(--gold)]/30"
-                        : "border-white/20 hover:border-white/50"
-                    }`}
-                    style={{ backgroundColor: getColorCss(color) }}
-                  />
-                ))}
-              </div>
-              {selectedColor && (
-                <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                  Selecionado: <span className="text-[var(--text-secondary)] font-medium">{selectedColor}</span>
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Tamanhos */}
-          {product.availableSizes?.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-[var(--text)]">Tamanho</p>
-                <SizeGuide />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {product.availableSizes.map((size) => (
-                  <button key={size} onClick={() => setSelectedSize(size)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                      selectedSize === size
-                        ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-                        : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"
-                    }`}>
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Fechamentos */}
-          {product.availableClosures?.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold text-[var(--text)] mb-2">Fechamento</p>
-              <div className="flex flex-wrap gap-2">
-                {product.availableClosures.map((closure) => (
-                  <button key={closure} onClick={() => setSelectedClosure(closure)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                      selectedClosure === closure
-                        ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-                        : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"
-                    }`}>
-                    {closure}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Personalização */}
-          {product.allowsCustomization && (
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
-              <p className="text-sm font-semibold text-[var(--text)] mb-3">Personalização</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setHasCustomization(false); setLogoFile(null); setLogoPreview(null); }}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors ${
-                    !hasCustomization
-                      ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-                      : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"
-                  }`}>
-                  Sem logo<br />
-                  <span className="font-bold">{formatCurrency(product.priceBase)}</span>
-                </button>
-                <button
-                  onClick={() => setHasCustomization(true)}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors ${
-                    hasCustomization
-                      ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-                      : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"
-                  }`}>
-                  Com logo<br />
-                  <span className="font-bold">{formatCurrency(product.priceWithCustom)}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Upload de logo */}
-          {hasCustomization && (
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4">
-              <p className="text-sm font-semibold text-[var(--text)] mb-3">
-                Envie seu logotipo <span className="text-red-400">*</span>
-              </p>
-              {logoPreview ? (
-                <div className="relative">
-                  <img src={logoPreview} alt="Preview do logo"
-                    className="w-full max-h-40 object-contain rounded-xl border border-[var(--border)] bg-[var(--surface-2)]"
-                  />
-                  <button onClick={() => { setLogoFile(null); setLogoPreview(null); }}
-                    className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-400">
-                    <X size={14} />
-                  </button>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-green-400">
-                    <CheckCircle size={12} /> Logo carregada — veja a prévia na imagem ao lado
-                  </div>
-                </div>
-              ) : logoFile?.name?.endsWith(".pdf") ? (
-                <div className="flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]">
-                  <span className="text-2xl">📄</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)] truncate">{logoFile.name}</p>
-                    <p className="text-xs text-[var(--text-muted)]">PDF enviado</p>
-                  </div>
-                  <button onClick={() => setLogoFile(null)} className="text-red-400 hover:text-red-300">
-                    <X size={16} />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--border)] rounded-xl p-6 cursor-pointer hover:border-[var(--gold)]/50 transition-colors">
-                  <Upload size={24} className="text-[var(--gold)] mb-2" />
-                  <p className="text-sm text-[var(--text-secondary)] text-center">Clique para enviar seu logo</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">PNG, JPG, PDF — máx. 10 MB</p>
-                  <input type="file" accept=".png,.jpg,.jpeg,.pdf" onChange={handleLogoChange} className="hidden" />
-                </label>
-              )}
-            </div>
-          )}
-
-          {/* Observações */}
-          <div>
-            <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1.5">
-              Observações (opcional)
-            </label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: cor preferida, posição da logo..."
-              rows={2}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] resize-none placeholder:text-[var(--text-muted)]"
-            />
-          </div>
-
-          {/* Quantidade + Preço */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-10 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-lg font-bold hover:border-[var(--gold)] transition-colors flex items-center justify-center">
-                −
-              </button>
-              <span className="w-10 text-center font-semibold text-lg">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)}
-                className="w-10 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-lg font-bold hover:border-[var(--gold)] transition-colors flex items-center justify-center">
-                +
-              </button>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-[var(--text-muted)]">Total</p>
-              <p className="text-2xl font-bold text-[var(--gold)]">{formatCurrency(price * quantity)}</p>
-            </div>
-          </div>
-
-          <Button size="lg" className="w-full" onClick={handleAddToCartClick}>
-            <ShoppingCart size={18} />
-            {hasCustomization && logoFile ? "Ver prévia e adicionar ao carrinho" : "Adicionar ao carrinho"}
-          </Button>
+    <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
+      {/* Breadcrumb */}
+      <div style={{ padding: "20px 32px 0" }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", display: "flex", gap: 8 }} className="t-mono" >
+          {["Loja", product.category.name, product.name].map((c, i, arr) => (
+            <span key={i} style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+              {i > 0 && <span style={{ margin: "0 8px", color: "var(--muted)" }}>/</span>}
+              <span style={{ color: i === arr.length - 1 ? "var(--ink)" : "var(--muted)" }}>{c}</span>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════
-          MODAL DE CONFIRMAÇÃO DO MOCKUP
-      ══════════════════════════════════════════════ */}
-      {showConfirmModal && product && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+      <section style={{ padding: "24px 32px 80px" }}>
+        <div
+          style={{ maxWidth: 1440, margin: "0 auto", display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 80 }}
+          className="max-md:grid-cols-1 max-md:gap-10"
+        >
+          {/* ── Gallery ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 16 }} className="max-sm:grid-cols-1">
+            {/* Thumbnails column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }} className="max-sm:hidden">
+              {product.images.map((src, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentImageIdx(i)}
+                  className="mockup-bg"
+                  style={{
+                    aspectRatio: "1",
+                    overflow: "hidden",
+                    border: i === currentImageIdx ? "1px solid var(--ink)" : "1px solid var(--line-soft)",
+                    padding: 0,
+                    cursor: "pointer",
+                    background: "var(--bg-2)",
+                  }}
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply" }}
+                  />
+                </button>
+              ))}
+            </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
-              <div>
-                <h2 className="font-bold text-[var(--text)] text-lg">Prévia do seu produto personalizado</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">Confira como ficará antes de adicionar ao carrinho</p>
+            {/* Main image */}
+            <div
+              className="mockup-bg"
+              style={{ aspectRatio: "4/5", overflow: "hidden", position: "relative" }}
+            >
+              {hasCustomization && (logoPreview || logoFile) ? (
+                <MockupPreview
+                  mockupType={product.mockupType ?? "capa"}
+                  logoPreview={logoPreview}
+                  logoFileName={logoFile?.name}
+                  selectedColor={selectedColor}
+                  configOverride={mockupConfig}
+                  colorImages={product.colorImages}
+                />
+              ) : product.images.length > 0 ? (
+                <>
+                  <img
+                    src={product.images[currentImageIdx] ?? product.images[0]}
+                    alt={product.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply" }}
+                  />
+                  {product.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentImageIdx((i) => (i - 1 + product.images.length) % product.images.length)}
+                        style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, background: "rgba(0,0,0,0.45)", border: 0, borderRadius: "50%", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => setCurrentImageIdx((i) => (i + 1) % product.images.length)}
+                        style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", width: 36, height: 36, background: "rgba(0,0,0,0.45)", border: 0, borderRadius: "50%", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ opacity: 0.15, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>sem imagem</div>
+                </div>
+              )}
+
+              {/* Category overlay */}
+              <div className="t-mono" style={{ position: "absolute", top: 20, left: 20, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>
+                {product.category.name}
               </div>
-              <button onClick={() => setShowConfirmModal(false)}
-                className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
+
+              {/* Live preview badge */}
+              {hasCustomization && logoFile && (
+                <div style={{ position: "absolute", top: 12, right: 12, display: "flex", alignItems: "center", gap: 6, background: "var(--gold)", color: "#000", fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", padding: "6px 12px", borderRadius: 2 }}>
+                  <Eye size={10} /> Prévia ao vivo
+                </div>
+              )}
+            </div>
+
+            {/* Mobile dots */}
+            {product.images.length > 1 && (
+              <div className="flex gap-1.5 justify-center sm:hidden" style={{ marginTop: 8 }}>
+                {product.images.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImageIdx(idx)}
+                    style={{
+                      width: idx === currentImageIdx ? 16 : 6,
+                      height: 6,
+                      borderRadius: 3,
+                      background: idx === currentImageIdx ? "var(--gold)" : "var(--line-soft)",
+                      border: 0,
+                      cursor: "pointer",
+                      padding: 0,
+                      transition: "width 0.2s, background 0.2s",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Product info ── */}
+          <div>
+            <p className="t-eyebrow mb-4">— {product.category.name}</p>
+            <h1
+              className="t-display"
+              style={{ fontSize: "clamp(40px,5vw,64px)", margin: 0, lineHeight: 0.95 }}
+            >
+              {product.name.includes(" ") ? (
+                <>
+                  {product.name.split(" ").slice(0, -1).join(" ")}{" "}
+                  <span className="t-display-italic" style={{ color: "var(--gold)" }}>
+                    {product.name.split(" ").slice(-1)}
+                  </span>
+                </>
+              ) : (
+                <span className="t-display-italic" style={{ color: "var(--gold)" }}>
+                  {product.name}
+                </span>
+              )}
+            </h1>
+
+            <p style={{ fontSize: 15, lineHeight: 1.65, color: "var(--ink-soft)", marginTop: 20, maxWidth: 520 }}>
+              {product.description}
+            </p>
+
+            <div className="t-display" style={{ fontSize: 36, marginTop: 28 }}>
+              {formatCurrency(price)}
+              {hasCustomization && (
+                <span className="t-mono" style={{ fontSize: 11, color: "var(--gold)", marginLeft: 14, letterSpacing: "0.14em" }}>
+                  (personalização incluída)
+                </span>
+              )}
+            </div>
+            <p className="t-eyebrow mt-1.5">
+              Ou 3× {formatCurrency(price / 3)} sem juros
+            </p>
+
+            <hr style={{ border: 0, borderTop: "1px solid var(--line-hair)", margin: "32px 0" }} />
+
+            {/* Colors */}
+            {product.availableColors?.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <p className="t-eyebrow mb-3">
+                  Cor ·{" "}
+                  <span style={{ color: "var(--ink)" }}>{selectedColor}</span>
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {product.availableColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      title={color}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        background: getColorCss(color),
+                        cursor: "pointer",
+                        border: selectedColor === color ? "2px solid var(--ink)" : "1px solid var(--line-soft)",
+                        outline: selectedColor === color ? "2px solid var(--bg)" : "none",
+                        outlineOffset: -4,
+                        transition: "border 0.15s",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sizes */}
+            {product.availableSizes?.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <p className="t-eyebrow">
+                    Tamanho ·{" "}
+                    <span style={{ color: "var(--ink)" }}>{selectedSize}</span>
+                  </p>
+                  <SizeGuide />
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {product.availableSizes.map((size) => (
+                    <Chip
+                      key={size}
+                      label={size}
+                      active={selectedSize === size}
+                      onClick={() => setSelectedSize(size)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Closures */}
+            {product.availableClosures?.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <p className="t-eyebrow mb-3">
+                  Fechamento ·{" "}
+                  <span style={{ color: "var(--ink)" }}>{selectedClosure}</span>
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {product.availableClosures.map((c) => (
+                    <Chip
+                      key={c}
+                      label={c}
+                      active={selectedClosure === c}
+                      onClick={() => setSelectedClosure(c)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Customization toggle */}
+            {product.allowsCustomization && (
+              <label
+                style={{
+                  display: "flex",
+                  gap: 14,
+                  padding: 20,
+                  border: `1px solid ${hasCustomization ? "var(--ink)" : "var(--line-soft)"}`,
+                  cursor: "pointer",
+                  marginBottom: 24,
+                  alignItems: "flex-start",
+                }}
+              >
+                {/* Custom checkbox */}
+                <div
+                  onClick={() => { setHasCustomization(!hasCustomization); if (hasCustomization) { setLogoFile(null); setLogoPreview(null); } }}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 2,
+                    border: "1px solid var(--ink)",
+                    background: hasCustomization ? "var(--ink)" : "transparent",
+                    flexShrink: 0,
+                    marginTop: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {hasCustomization && (
+                    <div style={{ width: 8, height: 8, background: "var(--bg)" }} />
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="t-display" style={{ fontSize: 17, marginBottom: 4 }}>
+                    Personalizar com minha logo{" "}
+                    <span className="t-mono" style={{ fontSize: 10, color: "var(--gold)", marginLeft: 8, letterSpacing: "0.14em" }}>
+                      +{formatCurrency(product.priceWithCustom - product.priceBase)}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+                    Bordado ou serigrafia, posição no peito. Enviaremos um mockup para aprovação antes da produção.
+                  </p>
+                </div>
+              </label>
+            )}
+
+            {/* Logo upload */}
+            {hasCustomization && (
+              <div style={{ marginBottom: 24 }}>
+                <p className="t-eyebrow mb-3">
+                  Seu logotipo <span style={{ color: "#c0392b" }}>*</span>
+                </p>
+                {logoPreview ? (
+                  <div style={{ position: "relative" }}>
+                    <img
+                      src={logoPreview}
+                      alt="Preview"
+                      style={{ width: "100%", maxHeight: 160, objectFit: "contain", border: "1px solid var(--line-soft)", background: "var(--bg-2)" }}
+                    />
+                    <button
+                      onClick={() => { setLogoFile(null); setLogoPreview(null); }}
+                      style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, background: "#c0392b", border: 0, borderRadius: "50%", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <X size={14} />
+                    </button>
+                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#27ae60" }}>
+                      <CheckCircle size={12} /> Logo carregada — veja a prévia na imagem
+                    </div>
+                  </div>
+                ) : logoFile?.name?.endsWith(".pdf") ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, border: "1px solid var(--line-soft)", background: "var(--bg-2)" }}>
+                    <span style={{ fontSize: 22 }}>📄</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{logoFile.name}</p>
+                      <p className="t-eyebrow mt-0.5">PDF enviado</p>
+                    </div>
+                    <button onClick={() => setLogoFile(null)} style={{ background: "none", border: 0, cursor: "pointer", color: "#c0392b" }}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px dashed var(--line-soft)",
+                      padding: 32,
+                      cursor: "pointer",
+                      gap: 8,
+                    }}
+                  >
+                    <Upload size={24} style={{ color: "var(--gold)" }} />
+                    <p style={{ fontSize: 13, color: "var(--muted)", margin: 0, textAlign: "center" }}>
+                      Clique para enviar seu logo
+                    </p>
+                    <p className="t-eyebrow" style={{ margin: 0 }}>PNG, JPG, PDF — máx. 10 MB</p>
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg,.pdf"
+                      onChange={handleLogoChange}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                )}
+              </div>
+            )}
+
+            {/* Observações */}
+            <div style={{ marginBottom: 28 }}>
+              <p className="t-eyebrow mb-2">Observações (opcional)</p>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Ex: cor preferida, posição da logo…"
+                rows={2}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  border: "1px solid var(--line-soft)",
+                  background: "transparent",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 14,
+                  outline: "none",
+                  color: "var(--ink)",
+                  resize: "none",
+                  borderRadius: "var(--r-sm)",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            {/* Qty + CTA */}
+            <div style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
+              <div style={{ display: "flex", border: "1px solid var(--ink)", alignItems: "center" }}>
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  style={{ width: 44, height: "100%", background: "transparent", border: 0, cursor: "pointer", fontSize: 18, color: "var(--ink)" }}
+                >
+                  −
+                </button>
+                <div className="t-mono" style={{ width: 44, textAlign: "center", fontSize: 15 }}>
+                  {quantity.toString().padStart(2, "0")}
+                </div>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  style={{ width: 44, height: "100%", background: "transparent", border: 0, cursor: "pointer", fontSize: 18, color: "var(--ink)" }}
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                onClick={handleAddToCartClick}
+                style={{
+                  flex: 1,
+                  padding: "16px 24px",
+                  background: "var(--ink)",
+                  color: "var(--bg)",
+                  border: "1px solid var(--ink)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  borderRadius: "var(--r-sm)",
+                  transition: "background 0.2s",
+                }}
+              >
+                {hasCustomization && logoFile
+                  ? `Ver prévia · ${formatCurrency(price * quantity)}`
+                  : `Adicionar à sacola · ${formatCurrency(price * quantity)}`}
+              </button>
+            </div>
+
+            {/* Info grid */}
+            <div
+              style={{
+                marginTop: 28,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 16,
+                paddingTop: 24,
+                borderTop: "1px solid var(--line-soft)",
+              }}
+            >
+              {[
+                { t: "Prazo", v: `${product.productionDays} dias úteis` },
+                { t: "Entrega", v: "Brasil inteiro" },
+                { t: "Pagamento", v: "50% + 50%" },
+              ].map(({ t, v }) => (
+                <div key={t}>
+                  <p className="t-eyebrow mb-1">{t}</p>
+                  <p style={{ fontSize: 13, margin: 0 }}>{v}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Confirm mockup modal ── */}
+      {showConfirmModal && product && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            background: "rgba(0,0,0,0.8)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--bg)",
+              border: "1px solid var(--line-soft)",
+              width: "100%",
+              maxWidth: 640,
+              maxHeight: "95vh",
+              overflowY: "auto",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px 24px",
+                borderBottom: "1px solid var(--line-soft)",
+              }}
+            >
+              <div>
+                <h2 className="t-display" style={{ fontSize: 22, margin: 0 }}>Prévia do produto personalizado</h2>
+                <p className="t-eyebrow mt-1">Confira antes de adicionar à sacola</p>
+              </div>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{ background: "none", border: 0, cursor: "pointer", color: "var(--muted)", padding: 8 }}
+              >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Mockup grande */}
-            <div className="p-5">
-              <div className="w-full aspect-square max-w-sm mx-auto bg-[#111] rounded-2xl overflow-hidden relative border border-[var(--border)]">
+            {/* Mockup */}
+            <div style={{ padding: 20 }}>
+              <div
+                style={{ width: "100%", aspectRatio: "1", maxWidth: 320, margin: "0 auto", background: "var(--bg-2)", overflow: "hidden", position: "relative" }}
+              >
                 <MockupPreview
                   mockupType={product.mockupType ?? "capa"}
                   logoPreview={logoPreview}
@@ -515,62 +705,68 @@ export default function ProdutoPage() {
               </div>
             </div>
 
-            {/* Resumo do pedido */}
-            <div className="px-5 pb-2">
-              <div className="bg-[var(--surface-2)] rounded-xl p-4 flex flex-col gap-2 text-sm">
-                <p className="font-semibold text-[var(--text)] mb-1">Resumo</p>
-                <div className="flex justify-between text-[var(--text-secondary)]">
-                  <span>Produto</span><span className="font-medium text-[var(--text)]">{product.name}</span>
-                </div>
-                {selectedColor && (
-                  <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Cor</span>
-                    <span className="flex items-center gap-1.5 font-medium text-[var(--text)]">
-                      <span className="w-3 h-3 rounded-full border border-white/20 inline-block" style={{ backgroundColor: getColorCss(selectedColor) }} />
-                      {selectedColor}
-                    </span>
+            {/* Summary */}
+            <div style={{ padding: "0 24px 12px" }}>
+              <div style={{ border: "1px solid var(--line-soft)", padding: 20 }}>
+                <p className="t-eyebrow mb-3">Resumo do pedido</p>
+                {[
+                  ["Produto", product.name],
+                  selectedColor  && ["Cor",          selectedColor],
+                  selectedSize   && ["Tamanho",       selectedSize],
+                  selectedClosure && ["Fechamento",   selectedClosure],
+                  ["Logo",       logoFile?.name ?? "—"],
+                  ["Quantidade", `${quantity}×`],
+                ].filter(Boolean).map(([k, v]) => (
+                  <div
+                    key={k as string}
+                    style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", color: "var(--muted)" }}
+                  >
+                    <span>{k as string}</span>
+                    <span style={{ color: "var(--ink)", fontWeight: 500 }}>{v as string}</span>
                   </div>
-                )}
-                {selectedSize && (
-                  <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Tamanho</span><span className="font-medium text-[var(--text)]">{selectedSize}</span>
-                  </div>
-                )}
-                {selectedClosure && (
-                  <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Fechamento</span><span className="font-medium text-[var(--text)]">{selectedClosure}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-[var(--text-secondary)]">
-                  <span>Personalização</span><span className="text-[var(--gold)] font-medium">Com logo ✓</span>
-                </div>
-                <div className="flex justify-between text-[var(--text-secondary)]">
-                  <span>Logo</span><span className="font-medium text-[var(--text)] truncate max-w-[160px]">{logoFile?.name}</span>
-                </div>
-                <div className="flex justify-between text-[var(--text-secondary)]">
-                  <span>Quantidade</span><span className="font-medium text-[var(--text)]">{quantity}×</span>
-                </div>
-                <div className="flex justify-between font-bold text-base pt-1 border-t border-[var(--border)]">
-                  <span className="text-[var(--text)]">Total</span>
-                  <span className="text-[var(--gold)]">{formatCurrency(price * quantity)}</span>
+                ))}
+                <hr style={{ border: 0, borderTop: "1px solid var(--line-hair)", margin: "10px 0" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <p className="t-eyebrow">Total</p>
+                  <div className="t-display" style={{ fontSize: 24 }}>{formatCurrency(price * quantity)}</div>
                 </div>
               </div>
-
-              <p className="text-xs text-[var(--text-muted)] text-center mt-3 px-2">
-                A prévia é aproximada. O posicionamento final da logo pode ter pequenas variações na produção.
+              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, lineHeight: 1.5, textAlign: "center" }}>
+                A prévia é aproximada. O posicionamento final pode ter pequenas variações na produção.
               </p>
             </div>
 
-            {/* Botões */}
-            <div className="flex gap-3 p-5 pt-3">
-              <button onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] text-sm font-medium hover:border-[var(--gold)]/50 transition-colors">
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 12, padding: 24, paddingTop: 12 }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{
+                  flex: 1, padding: "14px 20px",
+                  background: "transparent", color: "var(--muted)",
+                  border: "1px solid var(--line-soft)",
+                  fontFamily: "var(--font-mono)", fontSize: 10,
+                  letterSpacing: "0.12em", textTransform: "uppercase",
+                  cursor: "pointer", borderRadius: "var(--r-sm)",
+                }}
+              >
                 ← Voltar e ajustar
               </button>
-              <Button className="flex-1" size="lg" onClick={confirmAddToCart} loading={adding}>
-                <ShoppingCart size={16} />
-                Confirmar e adicionar
-              </Button>
+              <button
+                onClick={confirmAddToCart}
+                disabled={adding}
+                style={{
+                  flex: 1, padding: "14px 20px",
+                  background: adding ? "var(--muted)" : "var(--ink)",
+                  color: "var(--bg)",
+                  border: "1px solid var(--ink)",
+                  fontFamily: "var(--font-mono)", fontSize: 10,
+                  letterSpacing: "0.12em", textTransform: "uppercase",
+                  cursor: adding ? "not-allowed" : "pointer",
+                  borderRadius: "var(--r-sm)",
+                }}
+              >
+                {adding ? "Adicionando…" : "Confirmar e adicionar →"}
+              </button>
             </div>
           </div>
         </div>
