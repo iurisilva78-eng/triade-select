@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 async function getSiteConfig(): Promise<Record<string, string>> {
   try {
-    const saved = await prisma.siteConfig.findMany();
+    const saved    = await prisma.siteConfig.findMany();
     const savedMap = Object.fromEntries(saved.map((c) => [c.key, c.value]));
     return Object.fromEntries(DEFAULT_SITE_CONFIG.map((d) => [d.key, savedMap[d.key] ?? d.value]));
   } catch {
@@ -23,14 +23,13 @@ async function getFeaturedProducts() {
       where: { active: true },
       take: 4,
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, slug: true, priceBase: true, images: true },
+      select: { id: true, name: true, slug: true, priceBase: true, images: true, productionDays: true },
     });
   } catch {
     return [];
   }
 }
 
-/* ── Triângulo (reusado no footer) ─────────────────────── */
 function TriangleMark({ size = 28, color = "currentColor" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
@@ -46,46 +45,70 @@ export default async function HomePage() {
   const features = [1, 2, 3, 4].map((n) => ({
     n: `0${n}`,
     title: cfg[`feature_${n}_title`],
-    desc: cfg[`feature_${n}_desc`],
+    desc:  cfg[`feature_${n}_desc`],
   }));
+
+  // Announcement messages — filter empty ones
+  const announcements = [
+    cfg.announcement_1,
+    cfg.announcement_2,
+    cfg.announcement_3,
+  ].filter(Boolean);
+
+  // Footer links
+  const footerLinks = [1, 2, 3]
+    .map((n) => ({ label: cfg[`footer_link_${n}_label`], href: cfg[`footer_link_${n}_href`] }))
+    .filter((l) => l.label && l.href);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
 
-      {/* ── Announcement Bar ──────────────────────────────── */}
-      <div
-        className="flex items-center justify-center gap-4 overflow-hidden shrink-0"
-        style={{ background: "var(--ink)", color: "var(--bg)", height: 36 }}
-      >
-        <span className="t-mono text-[10px] tracking-[0.12em] uppercase hidden sm:block">
-          Frete grátis acima de R$ 500
-        </span>
-        <span className="opacity-30 hidden sm:block">●</span>
-        <span className="t-mono text-[10px] tracking-[0.12em] uppercase">
-          Personalização gratuita com seu logo
-        </span>
-        <span className="opacity-30 hidden sm:block">●</span>
-        <span className="t-mono text-[10px] tracking-[0.12em] uppercase hidden sm:block">
-          Prazo 15 dias úteis
-        </span>
-      </div>
+      {/* ── Announcement Bar ───────────────────────────────── */}
+      {announcements.length > 0 && (
+        <div
+          className="flex items-center justify-center gap-4 overflow-hidden shrink-0"
+          style={{ background: "var(--ink)", color: "var(--bg)", height: 36 }}
+        >
+          {announcements.map((msg, i) => (
+            <span key={i} className="flex items-center gap-4">
+              {i > 0 && <span className="opacity-30 hidden sm:inline">●</span>}
+              <span
+                className="t-mono text-[10px] tracking-[0.12em] uppercase"
+                style={{ display: i === 0 ? undefined : undefined }}
+              >
+                {msg}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
 
       <Header />
 
-      {/* ── Hero V1 Split ─────────────────────────────────── */}
+      {/* ── Hero V1 Split ──────────────────────────────────── */}
       <section style={{ borderBottom: "1px solid var(--line-soft)" }}>
         <div
           className="max-w-[1440px] mx-auto grid md:grid-cols-2"
           style={{ minHeight: "min(88svh, 780px)" }}
         >
-          {/* Texto */}
+          {/* Text */}
           <div className="flex flex-col justify-center px-5 py-10 md:px-16 md:py-20 order-1">
-            <div className="t-eyebrow mb-4">— Coleção permanente</div>
+            {cfg.hero_eyebrow && (
+              <div className="t-eyebrow mb-4">{cfg.hero_eyebrow}</div>
+            )}
             <h1
               className="t-display mb-4 md:mb-6"
               style={{ fontSize: "clamp(44px, 8vw, 82px)" }}
             >
-              {cfg.hero_title || (
+              {cfg.hero_title && (
+                <>
+                  {cfg.hero_title}
+                  {cfg.hero_title_italic && (
+                    <> <span className="t-display-italic" style={{ color: "var(--gold)" }}>{cfg.hero_title_italic}</span></>
+                  )}
+                </>
+              )}
+              {!cfg.hero_title && (
                 <>
                   Vestir a<br />
                   <span className="t-display-italic" style={{ color: "var(--gold)" }}>barbearia</span><br />
@@ -107,13 +130,13 @@ export default async function HomePage() {
               </Link>
               <Link href="/cadastro">
                 <Button size="lg" variant="outline" className="w-full">
-                  {cfg.hero_cta_secondary || "Personalizar com logo"}
+                  {cfg.hero_cta_secondary || "Criar conta grátis"}
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Imagem */}
+          {/* Image */}
           <div className="mockup-bg relative overflow-hidden aspect-[4/3] md:aspect-auto order-2">
             {cfg.hero_image ? (
               <img
@@ -130,17 +153,11 @@ export default async function HomePage() {
                 style={{ mixBlendMode: "multiply" }}
               />
             ) : null}
-            <div
-              className="absolute bottom-4 left-4 t-mono text-[9px] tracking-[0.14em] uppercase px-2 py-1"
-              style={{ background: "rgba(246,242,236,0.75)", color: "var(--muted)" }}
-            >
-              TS-001 · Capa Signature
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Features — lista editorial numerada ──────────── */}
+      {/* ── Features — lista editorial numerada ───────────── */}
       <section className="py-16 md:py-24 px-5 md:px-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>
         <div className="max-w-[1440px] mx-auto">
           <div className="mb-10 md:mb-14">
@@ -181,7 +198,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Grid de produtos ─────────────────────────────── */}
+      {/* ── Grid de produtos ──────────────────────────────── */}
       {products.length > 0 && (
         <section className="py-16 md:py-24 px-5 md:px-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>
           <div className="max-w-[1440px] mx-auto">
@@ -202,7 +219,7 @@ export default async function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              {products.map((p, i) => (
+              {products.map((p) => (
                 <Link key={p.id} href={`/produto/${p.slug}`} className="group">
                   <div className="mockup-bg aspect-[3/4] relative overflow-hidden mb-3">
                     {p.images[0] && (
@@ -213,12 +230,6 @@ export default async function HomePage() {
                         style={{ mixBlendMode: "multiply" }}
                       />
                     )}
-                    <div
-                      className="absolute bottom-3 left-3 t-mono"
-                      style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--muted)" }}
-                    >
-                      TS-00{i + 1}
-                    </div>
                   </div>
                   <div className="flex justify-between items-baseline">
                     <div
@@ -230,7 +241,7 @@ export default async function HomePage() {
                     <div className="text-sm font-medium shrink-0">{formatCurrency(p.priceBase)}</div>
                   </div>
                   <div className="t-eyebrow mt-1.5" style={{ fontSize: 9 }}>
-                    15 dias · personalizável
+                    {p.productionDays}d úteis · personalizável
                   </div>
                 </Link>
               ))}
@@ -243,88 +254,82 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Banner B2B ────────────────────────────────────── */}
+      {/* ── Banner B2B ─────────────────────────────────────── */}
       <section className="px-5 md:px-8 py-6 md:py-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>
         <div
           className="max-w-[1440px] mx-auto grain relative overflow-hidden px-6 py-12 md:px-16 md:py-20"
           style={{ background: "var(--ink)", color: "var(--bg)" }}
         >
           <div className="relative z-10 max-w-2xl">
-            <div className="t-eyebrow mb-4" style={{ color: "var(--gold)" }}>— Programa B2B</div>
+            <div className="t-eyebrow mb-4" style={{ color: "var(--gold)" }}>
+              {cfg.b2b_eyebrow || "— Programa B2B"}
+            </div>
             <h2 className="t-display mb-5" style={{ fontSize: "clamp(32px, 5vw, 64px)", color: "var(--bg)" }}>
-              Sua barbearia{" "}
-              <span className="t-display-italic" style={{ color: "var(--gold)" }}>merece</span>{" "}
-              um uniforme exclusivo.
+              {cfg.b2b_title ? (
+                cfg.b2b_title
+              ) : (
+                <>
+                  Sua barbearia{" "}
+                  <span className="t-display-italic" style={{ color: "var(--gold)" }}>merece</span>{" "}
+                  um uniforme exclusivo.
+                </>
+              )}
             </h2>
             <p
               className="text-sm leading-relaxed mb-8 max-w-md"
               style={{ color: "rgba(246,242,236,0.65)" }}
             >
-              Cadastre sua barbearia e receba condições especiais em pedidos recorrentes,
-              priority production e consultoria de identidade visual.
+              {cfg.b2b_subtitle || "Cadastre sua barbearia e receba condições especiais em pedidos recorrentes, priority production e consultoria de identidade visual."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link href="/cadastro">
                 <Button
                   size="lg"
                   className="w-full sm:w-auto"
-                  style={{
-                    background: "var(--bg)",
-                    color: "var(--ink)",
-                    borderColor: "var(--bg)",
-                  } as React.CSSProperties}
+                  style={{ background: "var(--bg)", color: "var(--ink)", borderColor: "var(--bg)" } as React.CSSProperties}
                 >
-                  Abrir conta B2B
+                  {cfg.b2b_cta || "Abrir conta B2B"}
                 </Button>
               </Link>
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto"
-                style={{ color: "var(--bg)", borderColor: "var(--bg)" } as React.CSSProperties}
-              >
-                Falar com consultor
-              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Footer editorial ─────────────────────────────── */}
+      {/* ── Footer editorial ───────────────────────────────── */}
       <footer
         className="px-5 md:px-8 py-12 md:py-16 mt-auto"
         style={{ background: "var(--ink)", color: "var(--bg)" }}
       >
         <div className="max-w-[1440px] mx-auto">
           <TriangleMark size={28} color="var(--bg)" />
-          <p className="t-display mt-4 mb-10 max-w-xs" style={{ fontSize: "clamp(20px, 3vw, 28px)", color: "var(--bg)" }}>
-            Cada peça <span className="t-display-italic">conta</span> a história da cadeira.
+          <p className="t-display mt-4 mb-10 max-w-xs" style={{ fontSize: "clamp(18px, 3vw, 26px)", color: "var(--bg)" }}>
+            {cfg.footer_tagline
+              ? cfg.footer_tagline
+              : <><span className="t-display-italic">Feito</span> para quem leva a barbearia a sério.</>
+            }
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mb-10">
-            {[
-              ["Loja", ["Capas", "Aventais", "Camisetas", "Uniformes"]],
-              ["Conta", ["Entrar", "Cadastrar", "Meus Pedidos", "Rastrear"]],
-              ["Contato", ["WhatsApp", "Instagram", "FAQ"]],
-            ].map(([title, links]) => (
-              <div key={title as string}>
-                <div className="t-eyebrow mb-3" style={{ color: "rgba(246,242,236,0.4)" }}>
-                  {title as string}
-                </div>
-                {(links as string[]).map((l) => (
-                  <div key={l} className="py-1 text-[13px]" style={{ color: "rgba(246,242,236,0.75)" }}>
-                    {l}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+          {footerLinks.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+              {footerLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="py-1 text-[13px] transition-opacity hover:opacity-100"
+                  style={{ color: "rgba(246,242,236,0.75)" }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          )}
 
           <div
             className="pt-5 t-mono text-[10px] tracking-[0.12em] uppercase"
             style={{ borderTop: "1px solid rgba(246,242,236,0.12)", color: "rgba(246,242,236,0.35)" }}
           >
-            © {new Date().getFullYear()} Triade Select — Todos os direitos reservados
+            {cfg.footer_copy || `© ${new Date().getFullYear()} Triade Select — Todos os direitos reservados`}
           </div>
         </div>
       </footer>
