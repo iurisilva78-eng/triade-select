@@ -10,13 +10,13 @@ export const DEFAULT_SITE_CONFIG = [
   // ─── Barra de anúncios ───────────────────────────────────────────────────
   { key: "announcement_1", label: "Mensagem 1",  type: "text", section: "announcement", value: "Frete grátis acima de R$ 500" },
   { key: "announcement_2", label: "Mensagem 2",  type: "text", section: "announcement", value: "Personalização gratuita com seu logo" },
-  { key: "announcement_3", label: "Mensagem 3",  type: "text", section: "announcement", value: "Prazo 15 dias úteis" },
+  { key: "announcement_3", label: "Mensagem 3",  type: "text", section: "announcement", value: "Parcelamos em até 3× sem juros via WhatsApp" },
 
   // ─── Hero ────────────────────────────────────────────────────────────────
   { key: "hero_eyebrow",        label: "Eyebrow (texto acima do título)",  type: "text",     section: "hero", value: "— Coleção permanente" },
   { key: "hero_title",          label: "Título (parte normal)",            type: "text",     section: "hero", value: "Uniformes que falam pela" },
   { key: "hero_title_italic",   label: "Título (parte itálica / dourada)", type: "text",     section: "hero", value: "sua barbearia" },
-  { key: "hero_subtitle",       label: "Subtítulo / descrição",            type: "textarea", section: "hero", value: "Capas, uniformes e aventais feitos sob encomenda com o logo da sua marca. Qualidade premium, entrega em todo o Brasil." },
+  { key: "hero_subtitle",       label: "Subtítulo / descrição",            type: "textarea", section: "hero", value: "Uniforme que vende antes do serviço começar. Capas, aventais e camisetas feitos sob encomenda com o logo da sua marca." },
   { key: "hero_cta_primary",    label: "Botão principal",                  type: "text",     section: "hero", value: "Explorar coleção" },
   { key: "hero_cta_secondary",  label: "Botão secundário",                 type: "text",     section: "hero", value: "Criar conta grátis" },
   { key: "hero_image",          label: "Imagem do produto (hero)",         type: "image",    section: "hero", value: "" },
@@ -38,7 +38,7 @@ export const DEFAULT_SITE_CONFIG = [
   { key: "b2b_cta",      label: "Botão do banner B2B",    type: "text",     section: "b2b", value: "Quero ser B2B" },
 
   // ─── Rodapé ──────────────────────────────────────────────────────────────
-  { key: "footer_tagline",   label: "Tagline do rodapé",              type: "text", section: "footer", value: "Feito para quem leva a barbearia a sério." },
+  { key: "footer_tagline",   label: "Tagline do rodapé",              type: "text", section: "footer", value: "Uniforme que vende antes do serviço começar." },
   { key: "footer_copy",      label: "Copyright",                      type: "text", section: "footer", value: "© 2025 Triade Select. Todos os direitos reservados." },
   { key: "footer_link_1_label", label: "Link 1 — Texto",             type: "text", section: "footer", value: "Produtos" },
   { key: "footer_link_1_href",  label: "Link 1 — URL",               type: "text", section: "footer", value: "/produtos" },

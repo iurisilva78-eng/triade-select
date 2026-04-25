@@ -89,16 +89,16 @@ export default async function HomePage() {
       <section style={{ borderBottom: "1px solid var(--line-soft)" }}>
         <div
           className="max-w-[1440px] mx-auto grid md:grid-cols-2"
-          style={{ minHeight: "min(88svh, 780px)" }}
+          style={{ minHeight: "min(72svh, 620px)" }}
         >
           {/* Text */}
-          <div className="flex flex-col justify-center px-5 py-10 md:px-16 md:py-20 order-1">
+          <div className="flex flex-col justify-center px-5 py-8 md:px-16 md:py-12 order-1">
             {cfg.hero_eyebrow && (
-              <div className="t-eyebrow mb-4">{cfg.hero_eyebrow}</div>
+              <div className="t-eyebrow mb-3">{cfg.hero_eyebrow}</div>
             )}
             <h1
-              className="t-display mb-4 md:mb-6"
-              style={{ fontSize: "clamp(44px, 8vw, 82px)" }}
+              className="t-display mb-3 md:mb-4"
+              style={{ fontSize: "clamp(36px, 5vw, 68px)" }}
             >
               {cfg.hero_title && (
                 <>
@@ -117,8 +117,8 @@ export default async function HomePage() {
               )}
             </h1>
             <p
-              className="mb-7 leading-relaxed max-w-sm"
-              style={{ fontSize: 15, color: "var(--ink-soft)" }}
+              className="mb-5 leading-relaxed max-w-sm"
+              style={{ fontSize: 14, color: "var(--ink-soft)" }}
             >
               {cfg.hero_subtitle || "Capas, aventais e uniformes feitos para quem entende que o cuidado começa no que o profissional veste."}
             </p>
@@ -163,8 +163,9 @@ export default async function HomePage() {
           <div className="mb-10 md:mb-14">
             <div className="t-eyebrow mb-3">— O que nos diferencia</div>
             <h2 className="t-display" style={{ fontSize: "clamp(28px, 5vw, 52px)" }}>
-              Um uniforme <span className="t-display-italic">bem feito</span>
-              <br className="hidden md:block" /> diz muito.
+              O detalhe que o cliente{" "}
+              <span className="t-display-italic">nota</span>
+              <br className="hidden md:block" /> antes de sentar na cadeira.
             </h2>
           </div>
 

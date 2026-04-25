@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { formatCurrency } from "@/lib/utils";
-import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
 import { SizeGuide } from "@/components/produto/SizeGuide";
@@ -94,6 +94,7 @@ export default function ProdutoPage() {
   const [selectedSize, setSelectedSize]     = useState("");
   const [selectedClosure, setSelectedClosure] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showLightbox, setShowLightbox]       = useState(false);
   const [mockupConfig, setMockupConfig]     = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
 
   useEffect(() => {
@@ -101,6 +102,14 @@ export default function ProdutoPage() {
       .then((r) => r.json())
       .then((data) => { if (data) setMockupConfig(data); })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setShowLightbox(false); setShowConfirmModal(false); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   useEffect(() => {
@@ -266,8 +275,23 @@ export default function ProdutoPage() {
                   <img
                     src={product.images[currentImageIdx] ?? product.images[0]}
                     alt={product.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply" }}
+                    onClick={() => setShowLightbox(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply", cursor: "zoom-in" }}
                   />
+                  {/* Zoom hint */}
+                  <button
+                    onClick={() => setShowLightbox(true)}
+                    style={{
+                      position: "absolute", bottom: 12, right: 12,
+                      width: 34, height: 34, background: "rgba(0,0,0,0.45)",
+                      border: 0, borderRadius: "50%", color: "#fff",
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "background 0.15s",
+                    }}
+                    title="Ver em tela cheia"
+                  >
+                    <Maximize2 size={14} />
+                  </button>
                   {product.images.length > 1 && (
                     <>
                       <button
@@ -355,13 +379,14 @@ export default function ProdutoPage() {
             <div className="t-display" style={{ fontSize: 36, marginTop: 28 }}>
               {formatCurrency(price)}
               {hasCustomization && (
-                <span className="t-mono" style={{ fontSize: 11, color: "var(--gold)", marginLeft: 14, letterSpacing: "0.14em" }}>
-                  (personalização incluída)
+                <span className="t-mono" style={{ fontSize: 9, color: "var(--gold)", marginLeft: 16, letterSpacing: "0.14em", opacity: 0.72, verticalAlign: "middle" }}>
+                  personalização incluída
                 </span>
               )}
             </div>
             <p className="t-eyebrow mt-1.5">
-              Ou 3× {formatCurrency(price / 3)} sem juros
+              Parcelamos em até 3× sem juros{" "}
+              <span style={{ color: "var(--gold)" }}>via WhatsApp</span>
             </p>
 
             <hr style={{ border: 0, borderTop: "1px solid var(--line-hair)", margin: "32px 0" }} />
@@ -474,8 +499,8 @@ export default function ProdutoPage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div className="t-display" style={{ fontSize: 17, marginBottom: 4 }}>
-                    Personalizar com minha logo{" "}
-                    <span className="t-mono" style={{ fontSize: 10, color: "var(--gold)", marginLeft: 8, letterSpacing: "0.14em" }}>
+                    Personalizar com minha logo
+                    <span className="t-mono" style={{ display: "inline-block", fontSize: 9, color: "var(--gold)", marginLeft: 10, letterSpacing: "0.12em", opacity: 0.8, verticalAlign: "middle" }}>
                       +{formatCurrency(product.priceWithCustom - product.priceBase)}
                     </span>
                   </div>
@@ -546,6 +571,19 @@ export default function ProdutoPage() {
                     />
                   </label>
                 )}
+
+                {/* 2B — Logo print dimensions */}
+                <div style={{ marginTop: 10, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <div style={{ width: 2, alignSelf: "stretch", background: "var(--gold)", flexShrink: 0, borderRadius: 1, opacity: 0.7 }} />
+                  <p className="t-mono" style={{ fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", lineHeight: 1.7, margin: 0 }}>
+                    {product.mockupType?.includes("camiseta") ? (
+                      <>Frente: logo até <strong style={{ color: "var(--ink)" }}>10 cm</strong> · Costas: logo até <strong style={{ color: "var(--ink)" }}>26 cm</strong></>
+                    ) : (
+                      <>Logo: medida maior até <strong style={{ color: "var(--ink)" }}>30 cm</strong></>
+                    )}
+                    <span style={{ display: "block", marginTop: 2, opacity: 0.7 }}>Medidas de impressão na peça — não resolução do arquivo</span>
+                  </p>
+                </div>
               </div>
             )}
 
@@ -641,6 +679,57 @@ export default function ProdutoPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Lightbox ── */}
+      {showLightbox && product && product.images.length > 0 && (
+        <div
+          onClick={() => setShowLightbox(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 60,
+            background: "rgba(0,0,0,0.92)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16, cursor: "zoom-out",
+          }}
+        >
+          {/* Prev/Next */}
+          {product.images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setCurrentImageIdx((i) => (i - 1 + product.images.length) % product.images.length); }}
+                style={{ position: "fixed", left: 16, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 61 }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setCurrentImageIdx((i) => (i + 1) % product.images.length); }}
+                style={{ position: "fixed", right: 16, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 61 }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
+          {/* Close */}
+          <button
+            onClick={() => setShowLightbox(false)}
+            style={{ position: "fixed", top: 16, right: 16, width: 40, height: 40, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 61 }}
+          >
+            <X size={18} />
+          </button>
+          {/* Image */}
+          <img
+            src={product.images[currentImageIdx] ?? product.images[0]}
+            alt={product.name}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "min(90vw, 1200px)", maxHeight: "90vh", objectFit: "contain", cursor: "default" }}
+          />
+          {/* Counter */}
+          {product.images.length > 1 && (
+            <div className="t-mono" style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}>
+              {currentImageIdx + 1} / {product.images.length}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Confirm mockup modal ── */}
       {showConfirmModal && product && (
