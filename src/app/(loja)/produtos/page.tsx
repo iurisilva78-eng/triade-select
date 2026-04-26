@@ -58,7 +58,7 @@ export default async function ProdutosPage({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-5 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-7 md:gap-5">
               {products.map((product) => (
                 <Link key={product.id} href={`/produto/${product.slug}`} className="group flex flex-col">
 
@@ -85,8 +85,7 @@ export default async function ProdutosPage({
 
                   {/* ── Imagem (aparece depois no mobile) ── */}
                   <div
-                    className="mockup-bg relative overflow-hidden order-2 md:order-1"
-                    style={{ aspectRatio: "1/1" }}
+                    className="mockup-bg relative overflow-hidden order-2 md:order-1 aspect-square md:aspect-[3/4]"
                   >
                     {product.images[0] ? (
                       <img

@@ -114,7 +114,7 @@ export default function CadastroPage() {
           <p className="t-eyebrow mb-4">— Cadastro</p>
           <h1
             className="t-display"
-            style={{ fontSize: "clamp(40px,5vw,56px)", margin: "0 0 10px", lineHeight: 0.95 }}
+            style={{ fontSize: "clamp(32px,5vw,56px)", margin: "0 0 10px", lineHeight: 0.95 }}
           >
             Crie sua
             <br />
@@ -204,6 +204,7 @@ export default function CadastroPage() {
               disabled={loading}
               style={{
                 marginTop: 8,
+                width: "100%",
                 padding: "16px 32px",
                 background: loading ? "var(--muted)" : "var(--ink)",
                 color: "var(--bg)",

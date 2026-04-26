@@ -104,46 +104,53 @@ export default function ContaPage() {
   return (
     <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
       {/* Page hero */}
-      <section style={{ padding: "40px 32px 32px" }}>
+      <section className="px-4 md:px-8 pt-8 pb-6">
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           <p className="t-eyebrow mb-3">— Minha conta</p>
-          <h1
-            className="t-display"
-            style={{ fontSize: "clamp(48px,7vw,72px)", margin: 0, lineHeight: 0.95 }}
-          >
-            Olá,{" "}
-            <span className="t-display-italic" style={{ color: "var(--gold)" }}>
-              {firstName}
-            </span>
-            .
+          <h1 className="t-display" style={{ fontSize: "clamp(32px,6vw,72px)", margin: 0, lineHeight: 0.95 }}>
+            Olá, <span className="t-display-italic" style={{ color: "var(--gold)" }}>{firstName}</span>.
           </h1>
-          <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 12 }}>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 10 }}>
             {session?.user?.email}
           </p>
         </div>
       </section>
 
       {/* Content */}
-      <section style={{ padding: "0 32px 96px" }}>
+      <section className="px-4 md:px-8 pb-24">
         <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            display: "grid",
-            gridTemplateColumns: "220px 1fr",
-            gap: 64,
-          }}
-          className="max-md:grid-cols-1 max-md:gap-8"
+          style={{ maxWidth: 1280, margin: "0 auto" }}
+          className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 md:gap-16"
         >
-          {/* Sidebar */}
+          {/* Sidebar — vertical no desktop, abas horizontais no mobile */}
           <aside>
-            <nav
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                borderTop: "1px solid var(--line-soft)",
-              }}
-            >
+            {/* Mobile: abas em linha */}
+            <nav className="flex md:hidden overflow-x-auto gap-1 mb-6 pb-1" style={{ borderBottom: "1px solid var(--line-soft)" }}>
+              {TABS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => handleTabClick(id)}
+                  className="shrink-0"
+                  style={{
+                    padding: "10px 16px",
+                    background: "transparent",
+                    border: 0,
+                    borderBottom: tab === id ? "2px solid var(--ink)" : "2px solid transparent",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 13,
+                    fontWeight: tab === id ? 600 : 400,
+                    color: tab === id ? "var(--ink)" : "var(--muted)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    marginBottom: -1,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            {/* Desktop: lista vertical */}
+            <nav className="hidden md:flex flex-col" style={{ borderTop: "1px solid var(--line-soft)" }}>
               {TABS.map(({ id, label }) => (
                 <button
                   key={id}
@@ -180,21 +187,10 @@ export default function ContaPage() {
             {/* ── Perfil ── */}
             {tab === "perfil" && (
               <div>
-                <h2
-                  className="t-display"
-                  style={{ fontSize: 40, margin: "0 0 28px", lineHeight: 0.95 }}
-                >
+                <h2 className="t-display" style={{ fontSize: "clamp(28px,4vw,40px)", margin: "0 0 24px", lineHeight: 0.95 }}>
                   Perfil
                 </h2>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 28,
-                    maxWidth: 640,
-                  }}
-                  className="max-sm:grid-cols-1"
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" style={{ maxWidth: 640 }}>
                   <div>
                     <p className="t-eyebrow mb-1.5">Nome completo</p>
                     <input
@@ -250,16 +246,8 @@ export default function ContaPage() {
                 <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 28 }}>
                   Deixe os campos em branco para não alterar a senha.
                 </p>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 28,
-                    maxWidth: 640,
-                  }}
-                  className="max-sm:grid-cols-1"
-                >
-                  <div style={{ gridColumn: "1 / -1" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" style={{ maxWidth: 640 }}>
+                  <div className="sm:col-span-2">
                     <p className="t-eyebrow mb-1.5">Senha atual</p>
                     <input
                       type="password"

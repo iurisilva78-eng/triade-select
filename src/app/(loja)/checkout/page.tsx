@@ -227,23 +227,8 @@ export default function CheckoutPage() {
   return (
     <div style={{ background: "var(--bg)", color: "var(--ink)", minHeight: "100vh" }}>
       {/* Simplified checkout header */}
-      <header
-        style={{
-          borderBottom: "1px solid var(--line-hair)",
-          padding: "18px 32px",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 16,
-          }}
-        >
+      <header className="px-4 md:px-8 py-4" style={{ borderBottom: "1px solid var(--line-hair)" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--ink)" }}>
             <TriangleMark size={20} color="var(--gold)" />
             <span style={{ fontFamily: "var(--font-display)", fontSize: 16, letterSpacing: "0.02em" }}>
@@ -278,32 +263,28 @@ export default function CheckoutPage() {
         </div>
       </header>
 
-      <section style={{ padding: "40px 32px 96px" }}>
+      <section className="px-4 md:px-8 pt-8 pb-24">
         <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            display: "grid",
-            gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)",
-            gap: 64,
-          }}
-          className="max-md:grid-cols-1"
+          style={{ maxWidth: 1280, margin: "0 auto" }}
+          className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-10 md:gap-16"
         >
           {/* ── Left: form ── */}
           <div>
             <p className="t-eyebrow mb-3">— Checkout</p>
             <h1
               className="t-display"
-              style={{ fontSize: "clamp(36px,5vw,56px)", margin: "0 0 32px", lineHeight: 0.95 }}
+              style={{ fontSize: "clamp(28px,5vw,56px)", margin: "0 0 28px", lineHeight: 0.95 }}
             >
               Onde <span className="t-display-italic">entregamos</span>?
             </h1>
 
             {/* Address */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-                <Field label="CEP" value={cep} onChange={setCep} placeholder="00000-000" />
-                <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <div style={{ marginBottom: 28 }}>
+              <div className="flex gap-3 mb-3 items-end">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Field label="CEP" value={cep} onChange={setCep} placeholder="00000-000" />
+                </div>
+                <div style={{ flexShrink: 0 }}>
                   <button
                     onClick={searchCep}
                     disabled={loadingCep}
@@ -344,7 +325,7 @@ export default function CheckoutPage() {
                   >
                     {address.street}, {address.neighborhood} — {address.city}/{address.state}
                   </div>
-                  <div style={{ display: "flex", gap: 12 }}>
+                  <div className="grid grid-cols-[100px_1fr] gap-3">
                     <Field label="Número" value={number} onChange={setNumber} placeholder="123" />
                     <Field label="Complemento" value={complement} onChange={setComplement} placeholder="Apto, sala..." wide />
                   </div>
