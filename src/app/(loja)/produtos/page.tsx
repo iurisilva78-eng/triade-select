@@ -58,13 +58,35 @@ export default async function ProdutosPage({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-5 md:gap-6">
               {products.map((product) => (
-                <Link key={product.id} href={`/produto/${product.slug}`} className="group block">
-                  {/* Image */}
+                <Link key={product.id} href={`/produto/${product.slug}`} className="group flex flex-col">
+
+                  {/* ── Info (aparece primeiro no mobile) ── */}
+                  <div className="order-1 md:order-2 mb-2 md:mb-0 md:mt-3">
+                    <p className="t-eyebrow mb-1" style={{ fontSize: 9, color: "var(--gold)" }}>
+                      — {product.category.name}
+                    </p>
+                    <div className="flex justify-between items-baseline gap-1">
+                      <div
+                        className="t-display line-clamp-2"
+                        style={{ fontSize: 14, fontWeight: 500, letterSpacing: "-0.01em", lineHeight: 1.25 }}
+                      >
+                        {product.name}
+                      </div>
+                      <div className="shrink-0 t-mono" style={{ fontSize: 12, fontWeight: 600 }}>
+                        {formatCurrency(product.priceBase)}
+                      </div>
+                    </div>
+                    <p className="t-eyebrow mt-1" style={{ color: "var(--muted)" }}>
+                      {product.productionDays}d · {product.allowsCustomization ? "personalizável" : "—"}
+                    </p>
+                  </div>
+
+                  {/* ── Imagem (aparece depois no mobile) ── */}
                   <div
-                    className="mockup-bg relative overflow-hidden mb-4"
-                    style={{ aspectRatio: "3/4" }}
+                    className="mockup-bg relative overflow-hidden order-2 md:order-1"
+                    style={{ aspectRatio: "1/1" }}
                   >
                     {product.images[0] ? (
                       <img
@@ -75,71 +97,24 @@ export default async function ProdutosPage({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg
-                          width="48"
-                          height="48"
-                          viewBox="0 0 100 100"
-                          fill="none"
-                          style={{ opacity: 0.2 }}
-                        >
-                          <polygon
-                            points="50,8 90,80 10,80"
-                            stroke="currentColor"
-                            strokeWidth="5"
-                            fill="none"
-                            strokeLinejoin="round"
-                          />
-                          <polygon
-                            points="50,28 78,75 22,75"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            fill="none"
-                            strokeLinejoin="round"
-                          />
+                        <svg width="36" height="36" viewBox="0 0 100 100" fill="none" style={{ opacity: 0.2 }}>
+                          <polygon points="50,8 90,80 10,80" stroke="currentColor" strokeWidth="5" fill="none" strokeLinejoin="round" />
+                          <polygon points="50,28 78,75 22,75" stroke="currentColor" strokeWidth="4" fill="none" strokeLinejoin="round" />
                         </svg>
                       </div>
                     )}
-                    {/* Category tag */}
-                    <div
-                      className="absolute top-3 left-3 t-mono"
-                      style={{
-                        fontSize: 9,
-                        letterSpacing: "0.14em",
-                        textTransform: "uppercase",
-                        color: "var(--gold)",
-                        borderBottom: "1px solid var(--gold)",
-                        paddingBottom: 2,
-                      }}
-                    >
-                      {product.category.name}
-                    </div>
-                    {/* Category code */}
-                    <div
-                      className="absolute bottom-3 left-3 t-mono"
-                      style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.12em" }}
-                    >
-                      {product.category.name.slice(0, 3).toUpperCase()}-{product.id.slice(0, 4).toUpperCase()}
-                    </div>
+                    {/* Mini color strip — fotos das cores */}
+                    {product.images.length > 1 && (
+                      <div className="absolute bottom-0 left-0 right-0 flex">
+                        {product.images.slice(0, 4).map((img, i) => (
+                          <div key={i} className="flex-1 overflow-hidden" style={{ height: 28 }}>
+                            <img src={img} alt="" className="w-full h-full object-cover" style={{ mixBlendMode: "multiply" }} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Info */}
-                  <div className="flex justify-between items-baseline">
-                    <div
-                      className="t-display"
-                      style={{ fontSize: 17, fontWeight: 500, letterSpacing: "-0.01em" }}
-                    >
-                      {product.name}
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 500, flexShrink: 0, marginLeft: 8 }}>
-                      {formatCurrency(product.priceBase)}
-                    </div>
-                  </div>
-                  <p
-                    className="t-eyebrow mt-1.5"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    {product.productionDays}d · {product.allowsCustomization ? "personalizável" : "sem personalização"}
-                  </p>
                 </Link>
               ))}
             </div>

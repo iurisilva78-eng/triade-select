@@ -233,8 +233,8 @@ export default function ProdutoPage() {
           style={{ maxWidth: 1440, margin: "0 auto" }}
           className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 md:gap-20"
         >
-          {/* ── Gallery ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-[80px_1fr] gap-4">
+          {/* ── Gallery — desktop: 1ª col / mobile: 2ª (info aparece primeiro) ── */}
+          <div className="order-2 md:order-1 grid grid-cols-1 sm:grid-cols-[80px_1fr] gap-4">
             {/* Thumbnails column */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }} className="max-sm:hidden">
               {product.images.map((src, i) => (
@@ -355,12 +355,12 @@ export default function ProdutoPage() {
             )}
           </div>
 
-          {/* ── Product info ── */}
-          <div>
+          {/* ── Product info — desktop: 2ª col / mobile: 1ª (aparece primeiro) ── */}
+          <div className="order-1 md:order-2">
             <p className="t-eyebrow mb-4">— {product.category.name}</p>
             <h1
               className="t-display"
-              style={{ fontSize: "clamp(40px,5vw,64px)", margin: 0, lineHeight: 0.95 }}
+              style={{ fontSize: "clamp(30px,5vw,64px)", margin: 0, lineHeight: 0.95 }}
             >
               {product.name.includes(" ") ? (
                 <>
