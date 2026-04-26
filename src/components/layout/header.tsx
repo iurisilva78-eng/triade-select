@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, Settings, Menu, X, User } from "lucide-react";
-import { useState } from "react";
+import { LogOut, Settings, Menu, X, User, Search } from "lucide-react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 
 /* ── Triângulo duplo da marca ──────────────────────────── */
@@ -19,8 +20,21 @@ function TriangleMark({ size = 26, color = "currentColor" }: { size?: number; co
 export function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const itemCount = useCartStore((s) => s.items.length);
   const user = session?.user as any;
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/produtos?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery("");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50" style={{ background: "color-mix(in oklab, var(--bg) 92%, transparent)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-hair)" }}>
@@ -55,6 +69,19 @@ export function Header() {
             </Link>
           )}
         </nav>
+
+        {/* D1: Search icon */}
+        <button
+          className="hidden md:flex items-center justify-center text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+          onClick={() => {
+            setSearchOpen(!searchOpen);
+            if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 50);
+          }}
+          style={{ width: 32, height: 32, background: "transparent", border: 0, cursor: "pointer" }}
+          aria-label="Buscar produtos"
+        >
+          {searchOpen ? <X size={16} /> : <Search size={16} />}
+        </button>
 
         {/* Direita — sacola + login */}
         <div className="flex items-center gap-4">
@@ -93,6 +120,56 @@ export function Header() {
           </button>
         </div>
       </div>
+
+      {/* D1: Search bar dropdown */}
+      {searchOpen && (
+        <div
+          className="hidden md:block px-5 md:px-8 py-3"
+          style={{ borderTop: "1px solid var(--line-hair)", background: "var(--bg)" }}
+        >
+          <form onSubmit={handleSearchSubmit} className="max-w-[1440px] mx-auto flex items-center gap-3">
+            <Search size={14} style={{ color: "var(--muted)", flexShrink: 0 }} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar produto…"
+              style={{
+                flex: 1,
+                border: 0,
+                background: "transparent",
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                color: "var(--ink)",
+                outline: "none",
+                padding: "6px 0",
+                borderRadius: 0,
+                borderBottom: "1px solid var(--line-soft)",
+                width: "100%",
+              }}
+            />
+            <button
+              type="submit"
+              className="t-mono"
+              style={{
+                fontSize: 9,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                padding: "7px 14px",
+                background: "var(--ink)",
+                color: "var(--bg)",
+                border: 0,
+                borderRadius: "var(--r-sm)",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              Buscar
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Mobile menu */}
       {menuOpen && (

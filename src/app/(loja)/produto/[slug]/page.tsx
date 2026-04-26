@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { formatCurrency } from "@/lib/utils";
-import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
+import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight, Maximize2, ChevronDown } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
 import { SizeGuide } from "@/components/produto/SizeGuide";
@@ -96,6 +96,7 @@ export default function ProdutoPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showLightbox, setShowLightbox]       = useState(false);
   const [mockupConfig, setMockupConfig]     = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
+  const [openAccordion, setOpenAccordion]   = useState<string | null>("descricao");
 
   useEffect(() => {
     fetch("/api/admin/mockup-config")
@@ -211,7 +212,44 @@ export default function ProdutoPage() {
   const price = hasCustomization ? product.priceWithCustom : product.priceBase;
 
   return (
-    <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
+    <div style={{ background: "var(--bg)", color: "var(--ink)", position: "relative" }}>
+
+      {/* B4: Floating "Especificações" vertical tab */}
+      <div
+        className="hidden md:flex"
+        style={{
+          position: "fixed",
+          left: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 40,
+        }}
+      >
+        <button
+          onClick={() => setOpenAccordion(openAccordion === "especificacoes" ? null : "especificacoes")}
+          className="t-mono"
+          style={{
+            writingMode: "vertical-rl",
+            textOrientation: "mixed",
+            transform: "rotate(180deg)",
+            fontSize: 9,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            padding: "14px 8px",
+            background: "var(--ink)",
+            color: "var(--bg)",
+            border: 0,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            borderRadius: "0 var(--r-sm) var(--r-sm) 0",
+          }}
+        >
+          Especificações
+        </button>
+      </div>
+
       {/* Breadcrumb */}
       <div className="px-4 md:px-8 pt-5">
         <div style={{ maxWidth: 1440, margin: "0 auto" }} className="t-mono flex items-center overflow-hidden">
@@ -393,7 +431,63 @@ export default function ProdutoPage() {
               <span style={{ color: "var(--gold)" }}>via WhatsApp</span>
             </p>
 
-            <hr style={{ border: 0, borderTop: "1px solid var(--line-hair)", margin: "32px 0" }} />
+            {/* B1: Benefits icon strip */}
+            <div
+              className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+              style={{
+                marginTop: 24,
+                padding: "16px 0",
+                borderTop: "1px solid var(--line-hair)",
+                borderBottom: "1px solid var(--line-hair)",
+              }}
+            >
+              {[
+                { icon: "✦", label: "Impressão DTF" },
+                { icon: "◈", label: "Logo Incluído" },
+                { icon: "⟳", label: "Lavável" },
+                { icon: "→", label: "Entrega Nacional" },
+              ].map(({ icon, label }) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
+                  <span style={{ fontSize: 16, color: "var(--gold)", lineHeight: 1 }}>{icon}</span>
+                  <span
+                    className="t-eyebrow"
+                    style={{ fontSize: 8, color: "var(--muted)", lineHeight: 1.4 }}
+                  >
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* B2: Production callout */}
+            <div
+              style={{
+                marginTop: 16,
+                padding: "14px 18px",
+                border: "1px solid var(--gold)",
+                borderLeft: "3px solid var(--gold)",
+                background: "rgba(168,130,58,0.05)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <span style={{ fontSize: 18, lineHeight: 1, color: "var(--gold)", flexShrink: 0 }}>◷</span>
+              <div>
+                <p
+                  className="t-eyebrow"
+                  style={{ fontSize: 9, color: "var(--gold)", marginBottom: 4 }}
+                >
+                  Prazo de produção
+                </p>
+                <p style={{ fontSize: 13, color: "var(--ink)", margin: 0, lineHeight: 1.5 }}>
+                  <strong>{product.productionDays} dias úteis</strong> após confirmação do pedido.
+                  Enviamos para todo o Brasil com rastreamento.
+                </p>
+              </div>
+            </div>
+
+            <hr style={{ border: 0, borderTop: "1px solid var(--line-hair)", margin: "28px 0" }} />
 
             {/* Colors */}
             {product.availableColors?.length > 0 && (
@@ -675,6 +769,99 @@ export default function ProdutoPage() {
                 <div key={t}>
                   <p className="t-eyebrow mb-1">{t}</p>
                   <p style={{ fontSize: 13, margin: 0 }}>{v}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* B3: Accordions */}
+            <div style={{ marginTop: 32, borderTop: "1px solid var(--line-soft)" }}>
+              {[
+                {
+                  id: "descricao",
+                  label: "Descrição",
+                  content: product.description,
+                },
+                {
+                  id: "especificacoes",
+                  label: "Especificações Técnicas",
+                  content: [
+                    product.weightGrams ? `Peso: ${product.weightGrams}g` : null,
+                    product.heightCm ? `Altura: ${product.heightCm}cm` : null,
+                    product.widthCm  ? `Largura: ${product.widthCm}cm` : null,
+                    product.lengthCm ? `Comprimento: ${product.lengthCm}cm` : null,
+                    product.availableColors.length > 0
+                      ? `Cores disponíveis: ${product.availableColors.join(", ")}`
+                      : null,
+                    product.availableSizes.length > 0
+                      ? `Tamanhos: ${product.availableSizes.join(", ")}`
+                      : null,
+                    product.availableClosures.length > 0
+                      ? `Fechamentos: ${product.availableClosures.join(", ")}`
+                      : null,
+                  ].filter(Boolean).join(" · "),
+                },
+                {
+                  id: "personalizacao",
+                  label: "Como Personalizar",
+                  content: product.allowsCustomization
+                    ? "Selecione a opção de personalização acima e envie seu logotipo em PNG, JPG ou PDF. Nossa equipe produzirá um mockup para sua aprovação antes de iniciar a produção. O logo é aplicado por bordado ou serigrafia na posição do peito."
+                    : "Este produto não aceita personalização com logotipo.",
+                },
+              ].map(({ id, label, content }) => (
+                <div
+                  key={id}
+                  style={{ borderBottom: "1px solid var(--line-soft)" }}
+                >
+                  <button
+                    onClick={() => setOpenAccordion(openAccordion === id ? null : id)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "16px 0",
+                      background: "transparent",
+                      border: 0,
+                      cursor: "pointer",
+                      color: "var(--ink)",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span
+                      className="t-eyebrow"
+                      style={{ fontSize: 10, letterSpacing: "0.14em" }}
+                    >
+                      {label}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        color: "var(--muted)",
+                        flexShrink: 0,
+                        transition: "transform 0.2s",
+                        transform: openAccordion === id ? "rotate(180deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  </button>
+                  <div
+                    style={{
+                      maxHeight: openAccordion === id ? 400 : 0,
+                      overflow: "hidden",
+                      transition: "max-height 0.3s ease",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontSize: 13,
+                        lineHeight: 1.7,
+                        color: "var(--ink-soft)",
+                        paddingBottom: 16,
+                        margin: 0,
+                      }}
+                    >
+                      {content}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>

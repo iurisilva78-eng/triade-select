@@ -30,6 +30,30 @@ async function getFeaturedProducts() {
   }
 }
 
+async function getCategories() {
+  try {
+    return await prisma.category.findMany({
+      include: { _count: { select: { products: { where: { active: true } } } } },
+      orderBy: { name: "asc" },
+    });
+  } catch {
+    return [];
+  }
+}
+
+// Category icon map — SVG paths keyed by partial slug/name match
+const CATEGORY_ICONS: Record<string, string> = {
+  capa:     "M20 20H4V8l8-6 8 6v12zm-8-2v-4H12v4m-4-4h2v4H8v-4zm8 0h2v4h-2v-4z",
+  camiseta: "M20.5 6L12 2 3.5 6 5 8l1-0.5V20h12V7.5L19 8l1.5-2zm-8.5 0c-.6 0-1.1-.2-1.5-.5.4.3.9.5 1.5.5s1.1-.2 1.5-.5c-.4.3-.9.5-1.5.5z",
+  avental:  "M12 2C9.8 2 8 3.8 8 6v1H5l1 13h12l1-13h-3V6c0-2.2-1.8-4-4-4zm0 2c1.1 0 2 .9 2 2v1h-4V6c0-1.1.9-2 2-2z",
+  robe:     "M8 2L5 7v13h14V7l-3-5H8zm0 1.5L7 6h10l-1-2.5H8zM6 8h12v11H6V8z",
+};
+
+function getCategoryIcon(slug: string): string {
+  const match = Object.keys(CATEGORY_ICONS).find((k) => slug.toLowerCase().includes(k));
+  return match ? CATEGORY_ICONS[match] : "M12 2L2 20h20L12 2zm0 4l6.5 12h-13L12 6z";
+}
+
 function TriangleMark({ size = 28, color = "currentColor" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
@@ -40,7 +64,7 @@ function TriangleMark({ size = 28, color = "currentColor" }: { size?: number; co
 }
 
 export default async function HomePage() {
-  const [cfg, products] = await Promise.all([getSiteConfig(), getFeaturedProducts()]);
+  const [cfg, products, categories] = await Promise.all([getSiteConfig(), getFeaturedProducts(), getCategories()]);
 
   const features = [1, 2, 3, 4].map((n) => ({
     n: `0${n}`,
@@ -196,6 +220,77 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── C1: Categorias com ícones ─────────────────────── */}
+      {categories.length > 0 && (
+        <section className="py-12 md:py-16 px-5 md:px-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>
+          <div className="max-w-[1440px] mx-auto">
+            <div className="t-eyebrow mb-8 text-center">— Navegue por categoria</div>
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: `repeat(${Math.min(categories.length, 4)}, minmax(0, 1fr))` }}
+            >
+              {categories.map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/produtos?category=${cat.slug}`}
+                  className="group flex flex-col items-center gap-4 py-8 px-4"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--line-soft)",
+                    borderRadius: "var(--r-lg)",
+                    textDecoration: "none",
+                    transition: "border-color 0.2s, background 0.2s",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: "50%",
+                      border: "1px solid var(--line-soft)",
+                      background: "var(--bg-2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background 0.2s, border-color 0.2s",
+                    }}
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--gold)"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d={getCategoryIcon(cat.slug)} />
+                    </svg>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 15,
+                        fontWeight: 500,
+                        color: "var(--ink)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {cat.name}
+                    </div>
+                    <div className="t-eyebrow" style={{ fontSize: 9, color: "var(--muted)" }}>
+                      {cat._count.products} {cat._count.products === 1 ? "peça" : "peças"}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Grid de produtos ──────────────────────────────── */}
       {products.length > 0 && (
         <section className="py-16 md:py-24 px-5 md:px-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>
@@ -251,6 +346,97 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* ── C2: UGC — Barbeiros que vestem Triade ─────────── */}
+      <section
+        className="py-16 md:py-24 px-5 md:px-8 grain"
+        style={{ background: "var(--ink)", borderBottom: "1px solid rgba(246,242,236,0.08)" }}
+      >
+        <div className="max-w-[1440px] mx-auto relative z-10">
+          <div className="text-center mb-10 md:mb-14">
+            <div className="t-eyebrow mb-3" style={{ color: "var(--gold)" }}>— Comunidade</div>
+            <h2 className="t-display" style={{ fontSize: "clamp(28px, 5vw, 52px)", color: "var(--bg)" }}>
+              Barbeiros que vestem{" "}
+              <span className="t-display-italic" style={{ color: "var(--gold)" }}>Triade</span>
+            </h2>
+          </div>
+
+          {/* Placeholder cards — will be replaced with real content */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            {[
+              { initials: "MB", name: "Marcel Barbeiro", city: "São Paulo, SP" },
+              { initials: "RB", name: "Rodrigo Borges", city: "Rio de Janeiro, RJ" },
+              { initials: "TL", name: "Thiago Lima", city: "Belo Horizonte, MG" },
+              { initials: "AC", name: "André Costa", city: "Curitiba, PR" },
+            ].map(({ initials, name, city }) => (
+              <div
+                key={name}
+                className="mockup-bg"
+                style={{
+                  aspectRatio: "3/4",
+                  background: "rgba(246,242,236,0.05)",
+                  border: "1px solid rgba(246,242,236,0.08)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                  padding: 16,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Avatar placeholder */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -60%)",
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    background: "rgba(168,130,58,0.2)",
+                    border: "1px solid var(--gold)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "var(--font-display)",
+                    fontSize: 20,
+                    color: "var(--gold)",
+                    opacity: 0.7,
+                  }}
+                >
+                  {initials}
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 13,
+                      color: "var(--bg)",
+                      marginBottom: 2,
+                    }}
+                  >
+                    {name}
+                  </div>
+                  <div className="t-eyebrow" style={{ fontSize: 8, color: "rgba(246,242,236,0.45)" }}>
+                    {city}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-8">
+            <p
+              className="t-eyebrow"
+              style={{ color: "rgba(246,242,236,0.35)", fontSize: 9 }}
+            >
+              Marque @triadeselect para aparecer aqui
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* ── Banner B2B ─────────────────────────────────────── */}
       <section className="px-5 md:px-8 py-6 md:py-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>
