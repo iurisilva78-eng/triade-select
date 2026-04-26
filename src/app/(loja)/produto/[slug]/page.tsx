@@ -213,10 +213,14 @@ export default function ProdutoPage() {
   return (
     <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
       {/* Breadcrumb */}
-      <div style={{ padding: "20px 32px 0" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", display: "flex", gap: 8 }} className="t-mono" >
+      <div className="px-4 md:px-8 pt-5">
+        <div style={{ maxWidth: 1440, margin: "0 auto" }} className="t-mono flex items-center overflow-hidden">
           {["Loja", product.category.name, product.name].map((c, i, arr) => (
-            <span key={i} style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            <span
+              key={i}
+              className={i === arr.length - 1 ? "hidden md:inline truncate" : "shrink-0"}
+              style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase" }}
+            >
               {i > 0 && <span style={{ margin: "0 8px", color: "var(--muted)" }}>/</span>}
               <span style={{ color: i === arr.length - 1 ? "var(--ink)" : "var(--muted)" }}>{c}</span>
             </span>
@@ -224,13 +228,13 @@ export default function ProdutoPage() {
         </div>
       </div>
 
-      <section style={{ padding: "24px 32px 80px" }}>
+      <section className="px-4 md:px-8 pt-6 pb-20">
         <div
-          style={{ maxWidth: 1440, margin: "0 auto", display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 80 }}
-          className="max-md:grid-cols-1 max-md:gap-10"
+          style={{ maxWidth: 1440, margin: "0 auto" }}
+          className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 md:gap-20"
         >
           {/* ── Gallery ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 16 }} className="max-sm:grid-cols-1">
+          <div className="grid grid-cols-1 sm:grid-cols-[80px_1fr] gap-4">
             {/* Thumbnails column */}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }} className="max-sm:hidden">
               {product.images.map((src, i) => (
@@ -656,11 +660,9 @@ export default function ProdutoPage() {
 
             {/* Info grid */}
             <div
+              className="grid grid-cols-3 gap-4"
               style={{
                 marginTop: 28,
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: 16,
                 paddingTop: 24,
                 borderTop: "1px solid var(--line-soft)",
               }}

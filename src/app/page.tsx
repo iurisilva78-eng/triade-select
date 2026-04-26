@@ -70,12 +70,9 @@ export default async function HomePage() {
           style={{ background: "var(--ink)", color: "var(--bg)", height: 36 }}
         >
           {announcements.map((msg, i) => (
-            <span key={i} className="flex items-center gap-4">
-              {i > 0 && <span className="opacity-30 hidden sm:inline">●</span>}
-              <span
-                className="t-mono text-[10px] tracking-[0.12em] uppercase"
-                style={{ display: i === 0 ? undefined : undefined }}
-              >
+            <span key={i} className={`items-center gap-4 ${i === 0 ? "flex" : "hidden sm:flex"}`}>
+              {i > 0 && <span className="opacity-30">●</span>}
+              <span className="t-mono text-[10px] tracking-[0.12em] uppercase">
                 {msg}
               </span>
             </span>
