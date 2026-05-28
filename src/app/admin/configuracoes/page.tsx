@@ -37,6 +37,9 @@ export default function ConfiguracoesPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connStatus, setConnStatus] = useState<"unknown" | "connected" | "disconnected">("unknown");
   const [loadingQr, setLoadingQr] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const qrInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── Save / Test ── */
@@ -60,21 +63,33 @@ export default function ConfiguracoesPage() {
     fetch("/api/admin/notification-phones").then(r => r.json()).then(d => { setPhones(d); setLoadingPhones(false); });
   };
 
+  const loadConfig = async () => {
+    const r = await fetch("/api/admin/site-config");
+    const data: any[] = await r.json();
+    const g = (k: string) => data.find((d: any) => d.key === k)?.value ?? "";
+    const savedProvider = g("whatsapp_provider") as Provider;
+    if (savedProvider) setProvider(savedProvider);
+    setZapiUrl(g("whatsapp_api_url"));
+    setZapiToken(g("whatsapp_client_token"));
+    setEvoBaseUrl(g("whatsapp_evo_base_url"));
+    setEvoInstance(g("whatsapp_evo_instance") || "triade-select");
+    setEvoApiKey(g("whatsapp_evo_api_key"));
+    if (g("whatsapp_group_id")) setGroupId(g("whatsapp_group_id"));
+    return { provider: savedProvider, evoBaseUrl: g("whatsapp_evo_base_url"), evoApiKey: g("whatsapp_evo_api_key") };
+  };
+
   useEffect(() => {
     loadPhones();
-    fetch("/api/admin/site-config").then(r => r.json()).then((data: any[]) => {
-      const g = (k: string) => data.find((d: any) => d.key === k)?.value ?? "";
-      const savedProvider = g("whatsapp_provider") as Provider;
-      if (savedProvider) setProvider(savedProvider);
-      setZapiUrl(g("whatsapp_api_url"));
-      setZapiToken(g("whatsapp_client_token"));
-      setEvoBaseUrl(g("whatsapp_evo_base_url"));
-      setEvoInstance(g("whatsapp_evo_instance") || "triade-select");
-      setEvoApiKey(g("whatsapp_evo_api_key"));
-      if (g("whatsapp_group_id")) setGroupId(g("whatsapp_group_id"));
-
-      // Auto-verifica status se Evolution já estiver configurada
-      if ((savedProvider || "evolution") === "evolution" && g("whatsapp_evo_base_url") && g("whatsapp_evo_api_key")) {
+    loadConfig().then(async ({ provider: p, evoBaseUrl: url, evoApiKey: key }) => {
+      // Se as credenciais não estão no banco, tenta importar das env vars automaticamente
+      if (!url || !key) {
+        await fetch("/api/admin/init-whatsapp", { method: "POST" });
+        const cfg = await loadConfig();
+        // Auto-verifica status se Evolution estiver configurada após seed
+        if ((cfg.provider || "evolution") === "evolution" && cfg.evoBaseUrl && cfg.evoApiKey) {
+          setTimeout(() => checkStatus(), 400);
+        }
+      } else if ((p || "evolution") === "evolution" && url && key) {
         setTimeout(() => checkStatus(), 800);
       }
     }).catch(() => {});
@@ -104,20 +119,40 @@ export default function ConfiguracoesPage() {
   /* ── QR Code / Status (Evolution) ── */
   const checkStatus = async () => {
     setLoadingQr(true);
+    setQrError(null);
     try {
       const res = await fetch("/api/admin/whatsapp-qr");
       const data = await res.json();
-      if (res.ok) {
-        if (data.status === "connected") { setConnStatus("connected"); setQrCode(null); if (qrInterval.current) { clearInterval(qrInterval.current); qrInterval.current = null; } }
-        else { setConnStatus("disconnected"); setQrCode(data.qrCode ?? null); }
+      if (!res.ok) {
+        setQrError(data.error ?? `Erro ${res.status} ao verificar status.`);
+        setConnStatus("disconnected");
+        return;
       }
+      if (data.status === "connected") {
+        setConnStatus("connected"); setQrCode(null);
+        if (qrInterval.current) { clearInterval(qrInterval.current); qrInterval.current = null; }
+      } else {
+        setConnStatus("disconnected");
+        setQrCode(data.qrCode ?? null);
+        if (!data.qrCode) setQrError("QR Code não retornado pela Evolution API. Verifique se a instância existe.");
+      }
+    } catch (err: any) {
+      setQrError("Falha de rede ao contatar a API. Verifique a URL da Evolution API.");
+      setConnStatus("disconnected");
     } finally { setLoadingQr(false); }
   };
 
   const handleConnectEvolution = async () => {
     setLoadingQr(true);
+    setQrError(null);
     // Cria instância (ou confirma que já existe)
-    await fetch("/api/admin/whatsapp-qr", { method: "POST" });
+    const postRes = await fetch("/api/admin/whatsapp-qr", { method: "POST" });
+    if (!postRes.ok) {
+      const postData = await postRes.json();
+      setQrError(postData.error ?? `Erro ${postRes.status} ao criar instância.`);
+      setLoadingQr(false);
+      return;
+    }
     await checkStatus();
     // Poll a cada 5s para detectar quando o QR foi escaneado
     if (qrInterval.current) clearInterval(qrInterval.current);
@@ -129,6 +164,23 @@ export default function ConfiguracoesPage() {
         clearInterval(qrInterval.current!); qrInterval.current = null;
       } else { setQrCode(data.qrCode ?? null); }
     }, 5000);
+  };
+
+  /* ── Verificar credenciais Evolution ── */
+  const handleVerifyCredentials = async () => {
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const res = await fetch("/api/admin/whatsapp-qr?check=1");
+      const data = await res.json();
+      if (res.ok) {
+        setVerifyResult({ ok: true, msg: data.status === "connected" ? "✓ Conectado e funcionando!" : "✓ Credenciais válidas — WhatsApp não conectado ainda." });
+      } else {
+        setVerifyResult({ ok: false, msg: data.error ?? `Erro ${res.status}` });
+      }
+    } catch {
+      setVerifyResult({ ok: false, msg: "Falha de rede. Verifique a URL da Evolution API." });
+    } finally { setVerifying(false); }
   };
 
   useEffect(() => () => { if (qrInterval.current) clearInterval(qrInterval.current); }, []);
@@ -263,12 +315,28 @@ export default function ConfiguracoesPage() {
           </div>
         )}
 
-        {/* Botão salvar */}
-        <div className="flex gap-3 mt-5">
+        {/* Botão salvar + verificar */}
+        <div className="flex flex-wrap gap-3 mt-5">
           <Button onClick={handleSaveApi} loading={savingApi} className="flex items-center gap-2">
             {savedApi ? <><Check size={14} /> Salvo!</> : <><Save size={14} /> Salvar credenciais</>}
           </Button>
+          {provider === "evolution" && (
+            <button
+              onClick={handleVerifyCredentials}
+              disabled={verifying || !evoBaseUrl || !evoApiKey}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors disabled:opacity-40"
+            >
+              {verifying ? <RefreshCw size={14} className="animate-spin" /> : <Wifi size={14} />}
+              Verificar credenciais
+            </button>
+          )}
         </div>
+        {verifyResult && (
+          <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-3 rounded-xl border ${verifyResult.ok ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}>
+            {verifyResult.ok ? <Wifi size={14} /> : <WifiOff size={14} />}
+            {verifyResult.msg}
+          </div>
+        )}
 
         {/* QR Code (Evolution) */}
         {provider === "evolution" && (
@@ -285,11 +353,18 @@ export default function ConfiguracoesPage() {
             </div>
 
             {connStatus !== "connected" && (
-              <button onClick={handleConnectEvolution} disabled={loadingQr || !evoBaseUrl || !evoInstance || !evoApiKey}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors disabled:opacity-40">
-                {loadingQr ? <RefreshCw size={14} className="animate-spin" /> : <QrCode size={14} />}
-                {qrCode ? "Atualizar QR Code" : "Gerar QR Code para conectar"}
-              </button>
+              <>
+                <button onClick={handleConnectEvolution} disabled={loadingQr || !evoBaseUrl || !evoInstance || !evoApiKey}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors disabled:opacity-40">
+                  {loadingQr ? <RefreshCw size={14} className="animate-spin" /> : <QrCode size={14} />}
+                  {qrCode ? "Atualizar QR Code" : "Gerar QR Code para conectar"}
+                </button>
+                {(!evoBaseUrl || !evoApiKey) && (
+                  <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                    ⚠️ Preencha e salve as credenciais da Evolution API acima antes de gerar o QR Code.
+                  </p>
+                )}
+              </>
             )}
 
             {connStatus === "connected" && (
@@ -298,6 +373,17 @@ export default function ConfiguracoesPage() {
                 <div>
                   <p className="text-sm font-semibold text-green-400">WhatsApp conectado!</p>
                   <p className="text-xs text-green-400/70">Notificações funcionando normalmente.</p>
+                </div>
+              </div>
+            )}
+
+            {qrError && (
+              <div className="mt-3 flex items-start gap-2 text-sm px-4 py-3 rounded-xl border bg-red-500/10 border-red-500/30 text-red-400">
+                <WifiOff size={14} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold mb-0.5">Erro ao contatar a Evolution API</p>
+                  <p className="text-xs opacity-80">{qrError}</p>
+                  <p className="text-xs opacity-60 mt-1">Dica: salve as credenciais e clique em "Verificar credenciais" para diagnóstico.</p>
                 </div>
               </div>
             )}
