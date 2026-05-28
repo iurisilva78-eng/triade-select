@@ -5,6 +5,14 @@ import { getWhatsAppConfig } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
+/* ─────────────────────────────────────────────
+   GET — verifica status / retorna QR code
+   Fluxo:
+   1. Lista instâncias (valida credenciais)
+   2. Se a instância não existe → cria
+   3. Se existe mas desconectada → pede QR
+   4. Se conectada → retorna connected
+───────────────────────────────────────────── */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || (session.user as any).role !== "ADMIN") {
@@ -16,108 +24,163 @@ export async function GET() {
   if (cfg.provider !== "evolution") {
     return NextResponse.json({ error: "Apenas disponível para Evolution API." }, { status: 400 });
   }
-
   if (!cfg.evoBaseUrl) {
-    return NextResponse.json({ error: "URL da Evolution API não configurada. Preencha o campo 'URL base' e salve." }, { status: 400 });
+    return NextResponse.json({ error: "URL da Evolution API não configurada." }, { status: 400 });
   }
   if (!cfg.evoApiKey) {
-    return NextResponse.json({ error: "API Key da Evolution API não configurada. Preencha o campo 'API Key' e salve." }, { status: 400 });
-  }
-  if (!cfg.evoInstance) {
-    return NextResponse.json({ error: "Nome da instância não configurado." }, { status: 400 });
+    return NextResponse.json({ error: "API Key não configurada." }, { status: 400 });
   }
 
-  // Helper: cria instância se não existir
-  const ensureInstance = async (): Promise<string | null> => {
-    const res = await fetch(`${cfg.evoBaseUrl}/instance/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: cfg.evoApiKey! },
-      body: JSON.stringify({ instanceName: cfg.evoInstance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      // 409 = já existe, tudo bem
-      if (res.status === 409 || (d?.message ?? "").includes("already")) return null;
-      return d?.message ?? `Erro ${res.status} ao criar instância.`;
-    }
-    return null; // sucesso
-  };
+  const base = cfg.evoBaseUrl.replace(/\/$/, "");
+  const instance = cfg.evoInstance ?? "triade-select";
+  const headers = { apikey: cfg.evoApiKey, "Content-Type": "application/json" };
 
-  // Verifica status da conexão
   try {
-    const stateRes = await fetch(
-      `${cfg.evoBaseUrl}/instance/connectionState/${cfg.evoInstance}`,
-      { headers: { apikey: cfg.evoApiKey! }, signal: AbortSignal.timeout(10_000) }
+    /* ── 1. Lista instâncias para validar credenciais ── */
+    const listRes = await fetch(`${base}/instance/fetchInstances`, {
+      headers,
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (listRes.status === 401 || listRes.status === 403) {
+      return NextResponse.json(
+        { error: "API Key inválida. Verifique a variável AUTHENTICATION_API_KEY no Railway e atualize o campo 'API Key' aqui." },
+        { status: 502 }
+      );
+    }
+
+    if (!listRes.ok) {
+      const body = await listRes.text().catch(() => "");
+      return NextResponse.json(
+        { error: `Evolution API inacessível (${listRes.status}). Verifique se a URL está correta e o serviço está no ar. Resposta: ${body.slice(0, 200)}` },
+        { status: 502 }
+      );
+    }
+
+    const listData = await listRes.json();
+    // listData pode ser array ou { instances: [] }
+    const instances: any[] = Array.isArray(listData) ? listData : (listData?.instances ?? []);
+
+    /* ── 2. Verifica se a instância já existe ── */
+    const existing = instances.find(
+      (i: any) =>
+        i?.instance?.instanceName === instance ||
+        i?.instanceName === instance ||
+        i?.name === instance
     );
+
+    if (!existing) {
+      /* ── 2a. Cria a instância ── */
+      const createBody: Record<string, any> = {
+        instanceName: instance,
+        qrcode: true,
+      };
+
+      // Tenta detectar versão: v2 usa integration, v1 não usa
+      const isV2 = base.includes("v2") || (instances[0] && "integration" in (instances[0]?.instance ?? {}));
+      if (isV2) createBody.integration = "WHATSAPP-BAILEYS";
+
+      const createRes = await fetch(`${base}/instance/create`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(createBody),
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      if (!createRes.ok) {
+        const d = await createRes.json().catch(() => ({}));
+        // Ignora "já existe" (409 ou message contendo "already")
+        if (createRes.status !== 409 && !String(d?.message ?? "").includes("already")) {
+          // Segunda tentativa: sem o campo integration
+          if (isV2) {
+            const retry = await fetch(`${base}/instance/create`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ instanceName: instance, qrcode: true }),
+              signal: AbortSignal.timeout(15_000),
+            });
+            if (!retry.ok) {
+              const rd = await retry.json().catch(() => ({}));
+              return NextResponse.json(
+                { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${rd?.message ?? JSON.stringify(rd).slice(0, 200)}` },
+                { status: 502 }
+              );
+            }
+          } else {
+            return NextResponse.json(
+              { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${d?.message ?? JSON.stringify(d).slice(0, 200)}` },
+              { status: 502 }
+            );
+          }
+        }
+      }
+
+      // Aguarda instância ficar pronta
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    /* ── 3. Verifica estado de conexão ── */
+    const stateRes = await fetch(`${base}/instance/connectionState/${instance}`, {
+      headers,
+      signal: AbortSignal.timeout(10_000),
+    });
 
     if (stateRes.ok) {
       const stateData = await stateRes.json();
-      const state = stateData?.instance?.state ?? stateData?.state ?? "unknown";
+      const state =
+        stateData?.instance?.state ??
+        stateData?.state ??
+        stateData?.connectionState ??
+        "unknown";
+
       if (state === "open") {
         return NextResponse.json({ status: "connected" });
       }
-      // Estado conhecido mas não conectado — vai buscar QR
-    } else if (stateRes.status === 401 || stateRes.status === 403) {
-      return NextResponse.json(
-        { error: "API Key inválida ou sem permissão. Verifique a AUTHENTICATION_API_KEY no painel do Railway." },
-        { status: 502 }
-      );
-    } else if (stateRes.status === 404) {
-      // Instância não existe ainda — cria automaticamente
-      const createErr = await ensureInstance();
-      if (createErr) {
-        return NextResponse.json({ error: `Instância não encontrada e não foi possível criá-la: ${createErr}` }, { status: 502 });
-      }
-      // Pequena pausa para a instância ficar pronta
-      await new Promise((r) => setTimeout(r, 1500));
-    } else {
-      const body = await stateRes.text().catch(() => "");
-      return NextResponse.json(
-        { error: `Evolution API retornou ${stateRes.status}. Resposta: ${body.slice(0, 200)}` },
-        { status: 502 }
-      );
     }
 
-    // Busca QR code via /instance/connect
-    const qrRes = await fetch(
-      `${cfg.evoBaseUrl}/instance/connect/${cfg.evoInstance}`,
-      { headers: { apikey: cfg.evoApiKey! }, signal: AbortSignal.timeout(15_000) }
-    );
+    /* ── 4. Busca QR code ── */
+    const qrRes = await fetch(`${base}/instance/connect/${instance}`, {
+      headers,
+      signal: AbortSignal.timeout(15_000),
+    });
 
     if (!qrRes.ok) {
       const body = await qrRes.text().catch(() => "");
       return NextResponse.json(
-        { error: `Erro ${qrRes.status} ao buscar QR Code. Detalhe: ${body.slice(0, 300)}` },
+        { error: `Erro ao buscar QR Code (${qrRes.status}): ${body.slice(0, 300)}` },
         { status: 502 }
       );
     }
 
     const qrData = await qrRes.json();
-    // Evolution API v1/v2 retorna o QR em campos diferentes
     const qrCode =
       qrData?.code ??
       qrData?.qrcode?.code ??
       qrData?.base64 ??
       qrData?.qrcode?.base64 ??
+      qrData?.pairingCode ??
       null;
 
     return NextResponse.json({ status: "disconnected", qrCode });
+
   } catch (err: any) {
     console.error("[whatsapp-qr GET]", err);
     const isTimeout = err?.name === "TimeoutError" || err?.code === "ABORT_ERR";
     return NextResponse.json(
       {
         error: isTimeout
-          ? `Timeout ao contatar ${cfg.evoBaseUrl}. Verifique se a URL está correta e o serviço está no ar.`
-          : `Erro de rede: ${err?.message ?? "Desconhecido"}. URL: ${cfg.evoBaseUrl}`,
+          ? `Timeout — servidor não respondeu em 10s. URL: ${base}`
+          : `Erro de rede: ${err?.message ?? "desconhecido"}`,
       },
       { status: 500 }
     );
   }
 }
 
-// Criar instância (chamado pelo admin ao clicar em "Gerar QR Code")
+/* ─────────────────────────────────────────────
+   POST — cria instância (chamado pelo botão
+   "Gerar QR Code" antes do polling)
+───────────────────────────────────────────── */
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session || (session.user as any).role !== "ADMIN") {
@@ -125,46 +188,50 @@ export async function POST() {
   }
 
   const cfg = await getWhatsAppConfig();
-
-  if (cfg.provider !== "evolution" || !cfg.evoBaseUrl || !cfg.evoInstance || !cfg.evoApiKey) {
-    return NextResponse.json(
-      { error: "Evolution API não configurada. Preencha URL, instância e API Key antes de gerar o QR Code." },
-      { status: 400 }
-    );
+  if (cfg.provider !== "evolution" || !cfg.evoBaseUrl || !cfg.evoApiKey) {
+    return NextResponse.json({ error: "Evolution API não configurada." }, { status: 400 });
   }
 
+  const base = cfg.evoBaseUrl.replace(/\/$/, "");
+  const instance = cfg.evoInstance ?? "triade-select";
+  const headers = { apikey: cfg.evoApiKey, "Content-Type": "application/json" };
+
   try {
-    const res = await fetch(`${cfg.evoBaseUrl}/instance/create`, {
+    const res = await fetch(`${base}/instance/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: cfg.evoApiKey },
-      body: JSON.stringify({
-        instanceName: cfg.evoInstance,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS",
-      }),
+      headers,
+      body: JSON.stringify({ instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
       signal: AbortSignal.timeout(15_000),
     });
 
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      // Instância já existe — tudo certo, segue para checkStatus
-      const msg = data?.message ?? "";
-      if (msg.includes("already") || res.status === 409) {
+      if (res.status === 409 || String(data?.message ?? "").includes("already")) {
         return NextResponse.json({ created: false, message: "Instância já existe." });
       }
-      return NextResponse.json(
-        { error: data?.message ?? `Erro ${res.status} ao criar instância na Evolution API.` },
-        { status: 502 }
-      );
+      // Tenta sem integration field
+      const retry = await fetch(`${base}/instance/create`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ instanceName: instance, qrcode: true }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const rd = await retry.json().catch(() => ({}));
+      if (!retry.ok && retry.status !== 409 && !String(rd?.message ?? "").includes("already")) {
+        return NextResponse.json(
+          { error: `Falha ao criar instância: ${rd?.message ?? JSON.stringify(rd).slice(0, 200)}` },
+          { status: 502 }
+        );
+      }
+      return NextResponse.json({ created: true });
     }
 
     return NextResponse.json({ created: true, data });
   } catch (err: any) {
     console.error("[whatsapp-qr POST]", err);
-    const isTimeout = err?.name === "TimeoutError" || err?.code === "ABORT_ERR";
     return NextResponse.json(
-      { error: isTimeout ? "Timeout ao criar instância. Verifique a URL da Evolution API." : `Erro: ${err?.message}` },
+      { error: `Erro ao criar instância: ${err?.message ?? "desconhecido"}` },
       { status: 500 }
     );
   }
