@@ -27,30 +27,50 @@ export async function GET() {
     return NextResponse.json({ error: "Nome da instância não configurado." }, { status: 400 });
   }
 
+  // Helper: cria instância se não existir
+  const ensureInstance = async (): Promise<string | null> => {
+    const res = await fetch(`${cfg.evoBaseUrl}/instance/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: cfg.evoApiKey! },
+      body: JSON.stringify({ instanceName: cfg.evoInstance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      // 409 = já existe, tudo bem
+      if (res.status === 409 || (d?.message ?? "").includes("already")) return null;
+      return d?.message ?? `Erro ${res.status} ao criar instância.`;
+    }
+    return null; // sucesso
+  };
+
   // Verifica status da conexão
   try {
     const stateRes = await fetch(
       `${cfg.evoBaseUrl}/instance/connectionState/${cfg.evoInstance}`,
-      {
-        headers: { apikey: cfg.evoApiKey },
-        signal: AbortSignal.timeout(10_000),
-      }
+      { headers: { apikey: cfg.evoApiKey! }, signal: AbortSignal.timeout(10_000) }
     );
 
     if (stateRes.ok) {
       const stateData = await stateRes.json();
       const state = stateData?.instance?.state ?? stateData?.state ?? "unknown";
-
       if (state === "open") {
         return NextResponse.json({ status: "connected" });
       }
+      // Estado conhecido mas não conectado — vai buscar QR
     } else if (stateRes.status === 401 || stateRes.status === 403) {
       return NextResponse.json(
-        { error: "API Key inválida ou sem permissão. Verifique a AUTHENTICATION_API_KEY da instância no Railway." },
+        { error: "API Key inválida ou sem permissão. Verifique a AUTHENTICATION_API_KEY no painel do Railway." },
         { status: 502 }
       );
     } else if (stateRes.status === 404) {
-      // Instância ainda não existe — vai criar via POST e pedir QR
+      // Instância não existe ainda — cria automaticamente
+      const createErr = await ensureInstance();
+      if (createErr) {
+        return NextResponse.json({ error: `Instância não encontrada e não foi possível criá-la: ${createErr}` }, { status: 502 });
+      }
+      // Pequena pausa para a instância ficar pronta
+      await new Promise((r) => setTimeout(r, 1500));
     } else {
       const body = await stateRes.text().catch(() => "");
       return NextResponse.json(
@@ -59,22 +79,16 @@ export async function GET() {
       );
     }
 
-    // Não conectado — busca QR code via /instance/connect
+    // Busca QR code via /instance/connect
     const qrRes = await fetch(
       `${cfg.evoBaseUrl}/instance/connect/${cfg.evoInstance}`,
-      {
-        headers: { apikey: cfg.evoApiKey },
-        signal: AbortSignal.timeout(15_000),
-      }
+      { headers: { apikey: cfg.evoApiKey! }, signal: AbortSignal.timeout(15_000) }
     );
 
     if (!qrRes.ok) {
       const body = await qrRes.text().catch(() => "");
-      let hint = "";
-      if (qrRes.status === 404) hint = " A instância pode não existir ainda — clique em 'Gerar QR Code' para criá-la.";
-      if (qrRes.status === 401 || qrRes.status === 403) hint = " API Key inválida.";
       return NextResponse.json(
-        { error: `Erro ${qrRes.status} ao buscar QR Code.${hint} Detalhe: ${body.slice(0, 200)}` },
+        { error: `Erro ${qrRes.status} ao buscar QR Code. Detalhe: ${body.slice(0, 300)}` },
         { status: 502 }
       );
     }
