@@ -11,7 +11,7 @@ const STATUS_EMOJI: Record<OrderStatus, string> = {
 /* ─────────────────────────────────────────────────
    Config — lê do banco (com fallback para env vars)
 ───────────────────────────────────────────────── */
-export type WhatsAppProvider = "zapi" | "evolution";
+export type WhatsAppProvider = "zapi" | "evolution" | "meta";
 
 export interface WhatsAppConfig {
   provider: WhatsAppProvider;
@@ -22,16 +22,20 @@ export interface WhatsAppConfig {
   evoBaseUrl?: string;
   evoInstance?: string;
   evoApiKey?: string;
+  // Meta WhatsApp Cloud API (gratuito)
+  metaPhoneId?: string;
+  metaToken?: string;
 }
 
 export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
-  // Env vars (fallback / compatibilidade)
   const envProvider    = (process.env.WHATSAPP_PROVIDER?.trim() || "") as WhatsAppProvider | "";
   const envUrl         = process.env.WHATSAPP_API_URL?.trim() ?? "";
   const envToken       = process.env.WHATSAPP_CLIENT_TOKEN?.trim() ?? "";
   const envEvoBaseUrl  = process.env.WHATSAPP_EVO_BASE_URL?.trim() ?? "";
   const envEvoInstance = process.env.WHATSAPP_EVO_INSTANCE?.trim() ?? "";
   const envEvoApiKey   = process.env.WHATSAPP_EVO_API_KEY?.trim() ?? "";
+  const envMetaPhoneId = process.env.WHATSAPP_META_PHONE_ID?.trim() ?? "";
+  const envMetaToken   = process.env.WHATSAPP_META_TOKEN?.trim() ?? "";
 
   try {
     const rows = await prisma.siteConfig.findMany({
@@ -41,15 +45,22 @@ export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
             "whatsapp_provider",
             "whatsapp_api_url", "whatsapp_client_token",
             "whatsapp_evo_base_url", "whatsapp_evo_instance", "whatsapp_evo_api_key",
+            "whatsapp_meta_phone_id", "whatsapp_meta_token",
           ],
         },
       },
     });
 
     const get = (key: string) => rows.find((r) => r.key === key)?.value?.trim() ?? "";
+    const provider = (get("whatsapp_provider") || envProvider || "meta") as WhatsAppProvider;
 
-    // DB tem prioridade; env var é fallback
-    const provider = (get("whatsapp_provider") || envProvider || "evolution") as WhatsAppProvider;
+    if (provider === "meta") {
+      return {
+        provider: "meta",
+        metaPhoneId: get("whatsapp_meta_phone_id") || envMetaPhoneId,
+        metaToken:   get("whatsapp_meta_token")    || envMetaToken,
+      };
+    }
 
     if (provider === "evolution") {
       return {
@@ -63,15 +74,13 @@ export async function getWhatsAppConfig(): Promise<WhatsAppConfig> {
     // Z-API
     return {
       provider: "zapi",
-      zapiUrl:         get("whatsapp_api_url")       || envUrl,
-      zapiClientToken: get("whatsapp_client_token")  || envToken,
+      zapiUrl:         get("whatsapp_api_url")      || envUrl,
+      zapiClientToken: get("whatsapp_client_token") || envToken,
     };
   } catch {
-    // Fallback total para env vars quando DB está inacessível
-    const provider = (envProvider || "evolution") as WhatsAppProvider;
-    if (provider === "evolution") {
-      return { provider: "evolution", evoBaseUrl: envEvoBaseUrl, evoInstance: envEvoInstance || "triade-select", evoApiKey: envEvoApiKey };
-    }
+    const provider = (envProvider || "meta") as WhatsAppProvider;
+    if (provider === "meta")      return { provider: "meta", metaPhoneId: envMetaPhoneId, metaToken: envMetaToken };
+    if (provider === "evolution") return { provider: "evolution", evoBaseUrl: envEvoBaseUrl, evoInstance: envEvoInstance || "triade-select", evoApiKey: envEvoApiKey };
     return { provider: "zapi", zapiUrl: envUrl, zapiClientToken: envToken };
   }
 }
@@ -85,6 +94,42 @@ export async function sendWhatsAppMessage(
   options?: { raw?: boolean }
 ): Promise<boolean> {
   const cfg = await getWhatsAppConfig();
+
+  /* ── Meta WhatsApp Cloud API ── */
+  if (cfg.provider === "meta") {
+    if (!cfg.metaPhoneId || !cfg.metaToken) {
+      console.warn("[WhatsApp/Meta] Phone Number ID ou Access Token não configurados.");
+      return false;
+    }
+    try {
+      // Garante formato internacional sem "+" (ex: 5543988656471)
+      const to = formatPhone(phone).replace(/\D/g, "");
+      const res = await fetch(
+        `https://graph.facebook.com/v20.0/${cfg.metaPhoneId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${cfg.metaToken}`,
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to,
+            type: "text",
+            text: { body: message },
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("[WhatsApp/Meta] Erro:", res.status, JSON.stringify(err));
+      }
+      return res.ok;
+    } catch (err) {
+      console.error("[WhatsApp/Meta] Falha:", err);
+      return false;
+    }
+  }
 
   if (cfg.provider === "evolution") {
     if (!cfg.evoBaseUrl || !cfg.evoInstance || !cfg.evoApiKey) {
@@ -139,6 +184,31 @@ export async function sendWhatsAppImageMessage(
   options?: { raw?: boolean }
 ): Promise<boolean> {
   const cfg = await getWhatsAppConfig();
+
+  /* ── Meta WhatsApp Cloud API ── */
+  if (cfg.provider === "meta") {
+    if (!cfg.metaPhoneId || !cfg.metaToken) return false;
+    try {
+      const to = formatPhone(phone).replace(/\D/g, "");
+      const res = await fetch(
+        `https://graph.facebook.com/v20.0/${cfg.metaPhoneId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${cfg.metaToken}`,
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to,
+            type: "image",
+            image: { link: imageUrl, caption },
+          }),
+        }
+      );
+      return res.ok;
+    } catch { return false; }
+  }
 
   if (cfg.provider === "evolution") {
     if (!cfg.evoBaseUrl || !cfg.evoInstance || !cfg.evoApiKey) return false;

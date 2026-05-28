@@ -9,7 +9,7 @@ import {
 
 interface NotifPhone { id: string; name: string; phone: string; active: boolean; }
 
-type Provider = "zapi" | "evolution";
+type Provider = "zapi" | "evolution" | "meta";
 
 export default function ConfiguracoesPage() {
   const [phones, setPhones] = useState<NotifPhone[]>([]);
@@ -32,6 +32,11 @@ export default function ConfiguracoesPage() {
   const [evoInstance, setEvoInstance] = useState("triade-select");
   const [evoApiKey, setEvoApiKey] = useState("");
   const [showEvoKey, setShowEvoKey] = useState(false);
+
+  /* ── Meta WhatsApp Cloud API ── */
+  const [metaPhoneId, setMetaPhoneId] = useState("");
+  const [metaToken, setMetaToken] = useState("");
+  const [showMetaToken, setShowMetaToken] = useState(false);
 
   /* ── QR / Status ── */
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -74,6 +79,8 @@ export default function ConfiguracoesPage() {
     setEvoBaseUrl(g("whatsapp_evo_base_url"));
     setEvoInstance(g("whatsapp_evo_instance") || "triade-select");
     setEvoApiKey(g("whatsapp_evo_api_key"));
+    setMetaPhoneId(g("whatsapp_meta_phone_id"));
+    setMetaToken(g("whatsapp_meta_token"));
     if (g("whatsapp_group_id")) setGroupId(g("whatsapp_group_id"));
     return { provider: savedProvider, evoBaseUrl: g("whatsapp_evo_base_url"), evoApiKey: g("whatsapp_evo_api_key") };
   };
@@ -99,16 +106,22 @@ export default function ConfiguracoesPage() {
   const handleSaveApi = async () => {
     setSavingApi(true); setSavedApi(false);
     const pairs =
-      provider === "evolution"
+      provider === "meta"
         ? [
-            { key: "whatsapp_provider", value: "evolution" },
+            { key: "whatsapp_provider",      value: "meta" },
+            { key: "whatsapp_meta_phone_id", value: metaPhoneId.trim() },
+            { key: "whatsapp_meta_token",    value: metaToken.trim() },
+          ]
+        : provider === "evolution"
+        ? [
+            { key: "whatsapp_provider",    value: "evolution" },
             { key: "whatsapp_evo_base_url", value: evoBaseUrl.trim().replace(/\/$/, "") },
             { key: "whatsapp_evo_instance", value: evoInstance.trim() },
-            { key: "whatsapp_evo_api_key", value: evoApiKey.trim() },
+            { key: "whatsapp_evo_api_key",  value: evoApiKey.trim() },
           ]
         : [
-            { key: "whatsapp_provider", value: "zapi" },
-            { key: "whatsapp_api_url", value: zapiUrl.trim() },
+            { key: "whatsapp_provider",     value: "zapi" },
+            { key: "whatsapp_api_url",      value: zapiUrl.trim() },
             { key: "whatsapp_client_token", value: zapiToken.trim() },
           ];
     await fetch("/api/admin/site-config", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(pairs) });
@@ -166,20 +179,39 @@ export default function ConfiguracoesPage() {
     }, 5000);
   };
 
-  /* ── Verificar credenciais Evolution ── */
+  /* ── Verificar credenciais ── */
   const handleVerifyCredentials = async () => {
     setVerifying(true);
     setVerifyResult(null);
     try {
-      const res = await fetch("/api/admin/whatsapp-qr?check=1");
-      const data = await res.json();
-      if (res.ok) {
-        setVerifyResult({ ok: true, msg: data.status === "connected" ? "✓ Conectado e funcionando!" : "✓ Credenciais válidas — WhatsApp não conectado ainda." });
+      if (provider === "meta") {
+        // Verifica credenciais Meta diretamente
+        if (!metaPhoneId || !metaToken) {
+          setVerifyResult({ ok: false, msg: "Preencha o Phone Number ID e o Access Token." });
+          setVerifying(false);
+          return;
+        }
+        const res = await fetch(
+          `https://graph.facebook.com/v20.0/${metaPhoneId}`,
+          { headers: { Authorization: `Bearer ${metaToken}` } }
+        );
+        const data = await res.json();
+        if (res.ok && data?.id) {
+          setVerifyResult({ ok: true, msg: `✓ Credenciais válidas! Número: ${data?.display_phone_number ?? data.id}` });
+        } else {
+          setVerifyResult({ ok: false, msg: `Token inválido ou Phone ID incorreto. Resposta: ${data?.error?.message ?? JSON.stringify(data).slice(0, 100)}` });
+        }
       } else {
-        setVerifyResult({ ok: false, msg: data.error ?? `Erro ${res.status}` });
+        const res = await fetch("/api/admin/whatsapp-qr");
+        const data = await res.json();
+        if (res.ok) {
+          setVerifyResult({ ok: true, msg: data.status === "connected" ? "✓ Conectado e funcionando!" : "✓ Credenciais válidas — WhatsApp não conectado ainda." });
+        } else {
+          setVerifyResult({ ok: false, msg: data.error ?? `Erro ${res.status}` });
+        }
       }
     } catch {
-      setVerifyResult({ ok: false, msg: "Falha de rede. Verifique a URL da Evolution API." });
+      setVerifyResult({ ok: false, msg: "Falha de rede ao verificar credenciais." });
     } finally { setVerifying(false); }
   };
 
@@ -245,14 +277,59 @@ export default function ConfiguracoesPage() {
         <p className="text-sm text-[var(--text-muted)] mb-5">Escolha como as notificações serão enviadas.</p>
 
         {/* Tabs provider */}
-        <div className="flex gap-2 mb-5">
-          {([["zapi", "Z-API (pago)"], ["evolution", "Evolution API (gratuito ✨)"]] as const).map(([val, label]) => (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {([
+            ["meta",      "Meta (gratuito ✨)"],
+            ["evolution", "Evolution API"],
+            ["zapi",      "Z-API (pago)"],
+          ] as const).map(([val, label]) => (
             <button key={val} onClick={() => setProvider(val)}
               className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${provider === val ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)]/50"}`}>
               {label}
             </button>
           ))}
         </div>
+
+        {/* Meta WhatsApp Cloud API fields */}
+        {provider === "meta" && (
+          <div className="space-y-4">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-xs text-green-300">
+              <p className="font-semibold mb-1">✅ Meta WhatsApp Cloud API — 100% gratuita</p>
+              <ol className="list-decimal list-inside space-y-1 text-green-400">
+                <li>Acesse <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="underline">developers.facebook.com</a> → crie um app tipo "Business"</li>
+                <li>Adicione o produto <strong>WhatsApp</strong> ao app</li>
+                <li>Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e o <strong>Token de acesso temporário</strong></li>
+                <li>Para token permanente: crie um <strong>System User</strong> no Meta Business Suite com permissão WhatsApp</li>
+                <li>Cole os dados abaixo e salve</li>
+              </ol>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Phone Number ID</label>
+              <input
+                type="text"
+                placeholder="Ex: 123456789012345"
+                value={metaPhoneId}
+                onChange={e => setMetaPhoneId(e.target.value)}
+                className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-[var(--gold)]"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Access Token</label>
+              <div className="relative">
+                <input
+                  type={showMetaToken ? "text" : "password"}
+                  placeholder="EAAxxxxxxxxxxxxx..."
+                  value={metaToken}
+                  onChange={e => setMetaToken(e.target.value)}
+                  className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-[var(--gold)] pr-12"
+                />
+                <button onClick={() => setShowMetaToken(!showMetaToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)]">
+                  {showMetaToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Z-API fields */}
         {provider === "zapi" && (
@@ -335,6 +412,19 @@ export default function ConfiguracoesPage() {
           <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-3 rounded-xl border ${verifyResult.ok ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}>
             {verifyResult.ok ? <Wifi size={14} /> : <WifiOff size={14} />}
             {verifyResult.msg}
+          </div>
+        )}
+
+        {/* Meta: nota sem QR */}
+        {provider === "meta" && metaPhoneId && metaToken && (
+          <div className="mt-5 pt-5 border-t border-[var(--border)]">
+            <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+              <Smartphone size={20} className="text-green-400" />
+              <div>
+                <p className="text-sm font-semibold text-green-400">Meta API configurada</p>
+                <p className="text-xs text-green-400/70">Não precisa de QR Code — a Meta gerencia a conexão pelo painel de desenvolvedores.</p>
+              </div>
+            </div>
           </div>
         )}
 

@@ -54,12 +54,15 @@ export const DEFAULT_SITE_CONFIG = [
   { key: "meta_title",       label: "Título da aba (SEO)",         type: "text", section: "geral", value: "Triade Select — Uniformes para Barbearias" },
   { key: "meta_description", label: "Descrição (SEO)",             type: "textarea", section: "geral", value: "Capas, uniformes e aventais personalizados para barbearias profissionais. Qualidade premium, entrega em todo o Brasil." },
 
-  // ─── WhatsApp / integração (mantidos do original) ────────────────────────
+  // ─── WhatsApp / integração ───────────────────────────────────────────────
   { key: "whatsapp_group_id",      label: "ID do grupo WhatsApp",       type: "text", section: "whatsapp", value: "" },
-  { key: "whatsapp_provider",      label: "Provedor WhatsApp",          type: "text", section: "whatsapp", value: "evolution" },
+  { key: "whatsapp_provider",      label: "Provedor WhatsApp",          type: "text", section: "whatsapp", value: "meta" },
   { key: "whatsapp_api_url",       label: "Z-API URL (send-text)",      type: "text", section: "whatsapp", value: "" },
   { key: "whatsapp_client_token",  label: "Z-API Client-Token",         type: "text", section: "whatsapp", value: "" },
   { key: "whatsapp_evo_base_url",  label: "Evolution API — Base URL",   type: "text", section: "whatsapp", value: "" },
   { key: "whatsapp_evo_instance",  label: "Evolution API — Instância",  type: "text", section: "whatsapp", value: "triade-select" },
   { key: "whatsapp_evo_api_key",   label: "Evolution API — API Key",    type: "text", section: "whatsapp", value: "" },
+  // ─── Meta WhatsApp Cloud API (gratuito) ─────────────────────────────────
+  { key: "whatsapp_meta_phone_id", label: "Meta — Phone Number ID",     type: "text", section: "whatsapp", value: "" },
+  { key: "whatsapp_meta_token",    label: "Meta — Access Token",        type: "text", section: "whatsapp", value: "" },
 ];
