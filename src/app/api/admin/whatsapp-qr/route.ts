@@ -81,23 +81,16 @@ export async function GET() {
 
       if (!createRes.ok) {
         const d = await createRes.json().catch(() => ({}));
-        // Ignora "já existe"
-        if (createRes.status !== 409 && !String(d?.message ?? "").toLowerCase().includes("already")) {
-          // Segunda tentativa: sem integration (compatibilidade v1)
-          const retry = await fetch(`${base}/instance/create`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ instanceName: instance, qrcode: true }),
-            signal: AbortSignal.timeout(15_000),
-          });
-          if (!retry.ok && retry.status !== 409) {
-            const rd = await retry.json().catch(() => ({}));
-            return NextResponse.json(
-              { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${JSON.stringify(rd).slice(0, 200)}` },
-              { status: 502 }
-            );
-          }
+        const dText = JSON.stringify(d).toLowerCase();
+        // Ignora "já existe" (409, 403 "already in use", ou qualquer menção de "already")
+        if (createRes.status !== 409 && !dText.includes("already")) {
+          const rd = d;
+          return NextResponse.json(
+            { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${JSON.stringify(rd).slice(0, 200)}` },
+            { status: 502 }
+          );
         }
+        // Se já existe, continua para verificar estado de conexão
       }
 
       // Aguarda instância ficar pronta
