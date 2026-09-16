@@ -24,8 +24,7 @@ export function MockupPreview({
   const configMap = configOverride ?? DEFAULT_MOCKUP_CONFIG;
   const config = configMap[mockupType] ?? DEFAULT_MOCKUP_CONFIG["capa"];
 
-  // Imagem de fundo: usa a foto da cor específica se existir, senão o mockup genérico
-  // Busca insensível a maiúsculas/minúsculas para evitar erros de cadastro
+  // Imagem de fundo: usa a foto da cor específica (busca case-insensitive) ou mockup genérico
   const colorKey = selectedColor ?? "";
   const colorImageUrl = colorImages && colorKey
     ? colorImages[colorKey]

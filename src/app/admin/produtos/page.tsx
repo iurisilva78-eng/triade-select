@@ -5,7 +5,6 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2, X, Check, Upload, RefreshCw, ImageIcon } from "lucide-react";
-import { AdminErrorBox } from "@/components/admin/AdminErrorBox";
 
 interface Product {
   id: string;
@@ -35,10 +34,12 @@ interface Category {
 }
 
 const MOCKUP_OPTIONS = [
-  { value: "capa",           label: "🧣 Capa de barbearia" },
-  { value: "camiseta",       label: "👕 Camiseta — logo no peito" },
-  { value: "camiseta-dupla", label: "👕 Camiseta — peito + costas" },
-  { value: "polo",           label: "👔 Polo / Gola — logo no peito" },
+  { value: "capa",                label: "🧣 Capa de barbearia" },
+  { value: "camiseta",            label: "👕 Camiseta — logo no peito" },
+  { value: "camiseta-dupla",      label: "👕 Camiseta — logo no peito + costas" },
+  { value: "polo",                label: "👔 Polo / Gola — logo no peito" },
+  { value: "gola-tconfort",       label: "🪡 Gola T-Confort Lisa" },
+  { value: "gola-tconfort-risca", label: "🪡 Gola T-Confort Risca de Giz" },
 ];
 
 const emptyForm = {
@@ -68,7 +69,7 @@ export default function AdminProdutosPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<{ msg: string; raw?: unknown } | null>(null);
+  const [error, setError] = useState("");
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -91,7 +92,7 @@ export default function AdminProdutosPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
-    setError(null);
+    setError("");
     setShowForm(true);
   };
 
@@ -116,7 +117,7 @@ export default function AdminProdutosPage() {
       availableSizes: (product.availableSizes ?? []).join(", "),
       availableClosures: (product.availableClosures ?? []).join(", "),
     });
-    setError(null);
+    setError("");
     setShowForm(true);
   };
 
@@ -175,15 +176,15 @@ export default function AdminProdutosPage() {
     str.split(",").map((s) => s.trim()).filter(Boolean);
 
   const handleSave = async () => {
-    setError(null);
+    setError("");
 
     // Validação local antes de enviar
-    if (!form.name.trim()) { setError({ msg: "Informe o nome do produto." }); return; }
-    if (!form.description.trim()) { setError({ msg: "Informe a descrição." }); return; }
-    if (!form.categoryId) { setError({ msg: "Selecione uma categoria." }); return; }
-    if (!form.priceBase || isNaN(parseFloat(form.priceBase))) { setError({ msg: "Informe o preço base." }); return; }
-    if (!form.priceWithCustom || isNaN(parseFloat(form.priceWithCustom))) { setError({ msg: "Informe o preço com logo." }); return; }
-    if (!form.weightGrams || isNaN(parseInt(form.weightGrams))) { setError({ msg: "Informe o peso." }); return; }
+    if (!form.name.trim()) { setError("Informe o nome do produto."); return; }
+    if (!form.description.trim()) { setError("Informe a descrição."); return; }
+    if (!form.categoryId) { setError("Selecione uma categoria."); return; }
+    if (!form.priceBase || isNaN(parseFloat(form.priceBase))) { setError("Informe o preço base."); return; }
+    if (!form.priceWithCustom || isNaN(parseFloat(form.priceWithCustom))) { setError("Informe o preço com logo."); return; }
+    if (!form.weightGrams || isNaN(parseInt(form.weightGrams))) { setError("Informe o peso."); return; }
 
     setSaving(true);
 
@@ -217,7 +218,7 @@ export default function AdminProdutosPage() {
     setSaving(false);
 
     if (!res.ok) {
-      setError({ msg: data.error ?? "Erro ao salvar.", raw: data._raw ?? data });
+      setError(data.error ?? "Erro ao salvar.");
       return;
     }
 
@@ -380,7 +381,7 @@ export default function AdminProdutosPage() {
               {/* ── Tipo de mockup ── */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-[var(--text)]">Tipo de mockup (prévia personalizada)</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {MOCKUP_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -507,7 +508,11 @@ export default function AdminProdutosPage() {
                 </div>
               </div>
 
-              {error && <AdminErrorBox message={error.msg} raw={error.raw} />}
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <Button variant="secondary" className="flex-1" onClick={() => setShowForm(false)}>

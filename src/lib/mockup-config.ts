@@ -30,4 +30,12 @@ export const DEFAULT_MOCKUP_CONFIG: Record<string, MockupTypeConfig> = {
     image: "/mockups/polo.png",
     zones: [{ top: "33%", left: "58%", size: "12%", label: "Peito" }],
   },
+  "gola-tconfort": {
+    image: "/mockups/gola-tconfort.jpg",
+    zones: [{ top: "35%", left: "55%", size: "11%", label: "Peito" }],
+  },
+  "gola-tconfort-risca": {
+    image: "/mockups/gola-tconfort-risca.jpg",
+    zones: [{ top: "35%", left: "55%", size: "11%", label: "Peito" }],
+  },
 };

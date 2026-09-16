@@ -89,6 +89,7 @@ export default function ProdutoPage() {
   const [hasCustomization, setHasCustomization] = useState(false);
   const [logoFile, setLogoFile]             = useState<File | null>(null);
   const [logoPreview, setLogoPreview]       = useState<string | null>(null);
+  const [removingBg, setRemovingBg]         = useState(false);
   const [notes, setNotes]                   = useState("");
   const [adding, setAdding]                 = useState(false);
   const [selectedColor, setSelectedColor]   = useState("");
@@ -98,7 +99,15 @@ export default function ProdutoPage() {
   const [showLightbox, setShowLightbox]       = useState(false);
   const [mockupConfig, setMockupConfig]     = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
   const [openAccordion, setOpenAccordion]   = useState<string | null>("descricao");
-  const [removingBg, setRemovingBg]         = useState(false);
+
+  // Case-insensitive lookup for color images
+  const resolveColorImage = (colorImages: Record<string, string> | undefined, color: string): string | undefined => {
+    if (!colorImages || !color) return undefined;
+    return colorImages[color]
+      ?? colorImages[color.toLowerCase()]
+      ?? colorImages[color.charAt(0).toUpperCase() + color.slice(1).toLowerCase()]
+      ?? Object.entries(colorImages).find(([k]) => k.toLowerCase() === color.toLowerCase())?.[1];
+  };
 
   useEffect(() => {
     fetch("/api/admin/mockup-config")
@@ -139,29 +148,29 @@ export default function ProdutoPage() {
     if (!allowed.includes(file.type)) { alert("Formato inválido. Use PNG, JPG ou PDF."); return; }
     if (file.size > 10 * 1024 * 1024) { alert("Arquivo muito grande. Máximo 10 MB."); return; }
     setLogoFile(file);
-    if (file.type !== "application/pdf") {
-      const isJpg = file.type === "image/jpeg" || file.type === "image/jpg";
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const dataUrl = ev.target?.result as string;
-        if (isJpg) {
-          setRemovingBg(true);
-          try {
-            const cleanUrl = await removeImageBackground(dataUrl);
-            setLogoPreview(cleanUrl);
-          } catch {
-            setLogoPreview(dataUrl);
-          } finally {
-            setRemovingBg(false);
-          }
-        } else {
-          setLogoPreview(dataUrl);
-        }
-      };
-      reader.readAsDataURL(file);
-    } else {
+    if (file.type === "application/pdf") {
       setLogoPreview(null);
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const isJpeg = file.type === "image/jpeg" || file.type === "image/jpg";
+      if (isJpeg) {
+        setRemovingBg(true);
+        try {
+          const cleaned = await removeImageBackground(dataUrl);
+          setLogoPreview(cleaned);
+        } catch {
+          setLogoPreview(dataUrl);
+        } finally {
+          setRemovingBg(false);
+        }
+      } else {
+        setLogoPreview(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddToCartClick = () => {
@@ -228,6 +237,8 @@ export default function ProdutoPage() {
   }
 
   const price = hasCustomization ? product.priceWithCustom : product.priceBase;
+  const colorImg = resolveColorImage(product.colorImages, selectedColor);
+  const mainSrc = colorImg ?? (product.images[currentImageIdx] ?? product.images[0] ?? null);
 
   return (
     <div style={{ background: "var(--bg)", color: "var(--ink)", position: "relative" }}>
@@ -330,15 +341,14 @@ export default function ProdutoPage() {
                   configOverride={mockupConfig}
                   colorImages={product.colorImages}
                 />
-              ) : product.images.length > 0 ? (
+              ) : mainSrc ? (
                 <>
                   <img
-                    src={product.images[currentImageIdx] ?? product.images[0]}
+                    src={mainSrc}
                     alt={product.name}
                     onClick={() => setShowLightbox(true)}
                     style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply", cursor: "zoom-in" }}
                   />
-                  {/* Zoom hint */}
                   <button
                     onClick={() => setShowLightbox(true)}
                     style={{
@@ -352,7 +362,8 @@ export default function ProdutoPage() {
                   >
                     <Maximize2 size={14} />
                   </button>
-                  {product.images.length > 1 && (
+                  {/* Navigation arrows: only when using gallery (not a color-specific image) */}
+                  {!colorImg && product.images.length > 1 && (
                     <>
                       <button
                         onClick={() => setCurrentImageIdx((i) => (i - 1 + product.images.length) % product.images.length)}
@@ -900,7 +911,7 @@ export default function ProdutoPage() {
       </section>
 
       {/* ── Lightbox ── */}
-      {showLightbox && product && product.images.length > 0 && (
+      {showLightbox && mainSrc && (
         <div
           onClick={() => setShowLightbox(false)}
           style={{
@@ -910,8 +921,8 @@ export default function ProdutoPage() {
             padding: 16, cursor: "zoom-out",
           }}
         >
-          {/* Prev/Next */}
-          {product.images.length > 1 && (
+          {/* Prev/Next: only for gallery, not color images */}
+          {!colorImg && product.images.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); setCurrentImageIdx((i) => (i - 1 + product.images.length) % product.images.length); }}
@@ -936,13 +947,13 @@ export default function ProdutoPage() {
           </button>
           {/* Image */}
           <img
-            src={product.images[currentImageIdx] ?? product.images[0]}
+            src={mainSrc}
             alt={product.name}
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: "min(90vw, 1200px)", maxHeight: "90vh", objectFit: "contain", cursor: "default" }}
           />
-          {/* Counter */}
-          {product.images.length > 1 && (
+          {/* Counter: only for gallery */}
+          {!colorImg && product.images.length > 1 && (
             <div className="t-mono" style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}>
               {currentImageIdx + 1} / {product.images.length}
             </div>
