@@ -70,7 +70,16 @@ export async function GET() {
     );
 
     if (!existing) {
-      /* ── 2a. Tenta criar a instância ── */
+      /* ── 2a. Limpa instância corrompida (se existir) e cria nova ── */
+      // Tenta deletar instância quebrada antes de criar (idempotente — ignora erros)
+      await fetch(`${base}/instance/delete/${instance}`, {
+        method: "DELETE",
+        headers,
+        signal: AbortSignal.timeout(5_000),
+      }).catch(() => {});
+
+      await new Promise((r) => setTimeout(r, 1000));
+
       const createRes = await fetch(`${base}/instance/create`, {
         method: "POST",
         headers,
@@ -79,16 +88,10 @@ export async function GET() {
       });
 
       if (createRes.ok) {
-        // Criou com sucesso — aguarda ficar pronta
         await new Promise((r) => setTimeout(r, 2000));
       } else {
         const d = await createRes.json().catch(() => ({}));
-        const dText = JSON.stringify(d).toLowerCase();
-        // Se for qualquer erro que não seja "já existe", loga mas continua tentando
-        // (a instância pode existir mas não ter sido listada no formato esperado)
-        if (!dText.includes("already") && createRes.status !== 409) {
-          console.warn("[whatsapp-qr] Criação falhou, tentando conectar mesmo assim:", dText);
-        }
+        console.warn("[whatsapp-qr] Criação falhou após limpeza:", JSON.stringify(d));
         await new Promise((r) => setTimeout(r, 1000));
       }
     }
@@ -127,12 +130,18 @@ export async function GET() {
     }
 
     const qrData = await qrRes.json();
+    console.log("[whatsapp-qr] connect response:", JSON.stringify(qrData).slice(0, 500));
     const qrCode =
       qrData?.code ??
       qrData?.qrcode?.code ??
       qrData?.base64 ??
       qrData?.qrcode?.base64 ??
+      qrData?.instance?.qrcode?.base64 ??
+      qrData?.instance?.qrcode?.code ??
+      qrData?.instance?.code ??
+      qrData?.instance?.base64 ??
       qrData?.pairingCode ??
+      qrData?.instance?.pairingCode ??
       null;
 
     return NextResponse.json({ status: "disconnected", qrCode });
