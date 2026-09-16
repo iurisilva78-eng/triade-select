@@ -71,44 +71,29 @@ export async function GET() {
 
     if (!existing) {
       /* ── 2a. Cria a instância ── */
-      const createBody: Record<string, any> = {
-        instanceName: instance,
-        qrcode: true,
-      };
-
-      // Tenta detectar versão: v2 usa integration, v1 não usa
-      const isV2 = base.includes("v2") || (instances[0] && "integration" in (instances[0]?.instance ?? {}));
-      if (isV2) createBody.integration = "WHATSAPP-BAILEYS";
-
+      // Evolution API v2 sempre requer o campo integration
       const createRes = await fetch(`${base}/instance/create`, {
         method: "POST",
         headers,
-        body: JSON.stringify(createBody),
+        body: JSON.stringify({ instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
         signal: AbortSignal.timeout(15_000),
       });
 
       if (!createRes.ok) {
         const d = await createRes.json().catch(() => ({}));
-        // Ignora "já existe" (409 ou message contendo "already")
-        if (createRes.status !== 409 && !String(d?.message ?? "").includes("already")) {
-          // Segunda tentativa: sem o campo integration
-          if (isV2) {
-            const retry = await fetch(`${base}/instance/create`, {
-              method: "POST",
-              headers,
-              body: JSON.stringify({ instanceName: instance, qrcode: true }),
-              signal: AbortSignal.timeout(15_000),
-            });
-            if (!retry.ok) {
-              const rd = await retry.json().catch(() => ({}));
-              return NextResponse.json(
-                { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${rd?.message ?? JSON.stringify(rd).slice(0, 200)}` },
-                { status: 502 }
-              );
-            }
-          } else {
+        // Ignora "já existe"
+        if (createRes.status !== 409 && !String(d?.message ?? "").toLowerCase().includes("already")) {
+          // Segunda tentativa: sem integration (compatibilidade v1)
+          const retry = await fetch(`${base}/instance/create`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ instanceName: instance, qrcode: true }),
+            signal: AbortSignal.timeout(15_000),
+          });
+          if (!retry.ok && retry.status !== 409) {
+            const rd = await retry.json().catch(() => ({}));
             return NextResponse.json(
-              { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${d?.message ?? JSON.stringify(d).slice(0, 200)}` },
+              { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${JSON.stringify(rd).slice(0, 200)}` },
               { status: 502 }
             );
           }
@@ -207,24 +192,13 @@ export async function POST() {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      if (res.status === 409 || String(data?.message ?? "").includes("already")) {
+      if (res.status === 409 || String(data?.message ?? "").toLowerCase().includes("already")) {
         return NextResponse.json({ created: false, message: "Instância já existe." });
       }
-      // Tenta sem integration field
-      const retry = await fetch(`${base}/instance/create`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ instanceName: instance, qrcode: true }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      const rd = await retry.json().catch(() => ({}));
-      if (!retry.ok && retry.status !== 409 && !String(rd?.message ?? "").includes("already")) {
-        return NextResponse.json(
-          { error: `Falha ao criar instância: ${rd?.message ?? JSON.stringify(rd).slice(0, 200)}` },
-          { status: 502 }
-        );
-      }
-      return NextResponse.json({ created: true });
+      return NextResponse.json(
+        { error: `Falha ao criar instância: ${JSON.stringify(data).slice(0, 200)}` },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json({ created: true, data });
