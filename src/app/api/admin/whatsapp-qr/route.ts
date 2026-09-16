@@ -129,31 +129,56 @@ export async function GET() {
     let { ok: qrOk, status: qrStatus, data: qrData } = await tryConnect();
 
     // Instância corrompida (ex: Render reiniciou e perdeu arquivos locais)
-    // Detectado quando connect retorna erro mas a instância existe
+    // Detectado quando connect retorna erro mas a instância existe.
+    // Usamos restart (não delete+create) porque o v2.3.7 tem bug no create via REST.
     if (!qrOk || qrData?.error === true) {
-      console.log("[whatsapp-qr] connect falhou, recriando instância...");
-      await fetch(`${base}/instance/delete/${instance}`, {
+      console.log("[whatsapp-qr] connect falhou, tentando logout+restart...");
+
+      // Logout suave (remove apenas sessão WhatsApp, mantém instância no DB)
+      await fetch(`${base}/instance/logout/${instance}`, {
         method: "DELETE",
         headers,
         signal: AbortSignal.timeout(10_000),
       }).catch(() => {});
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 1000));
 
-      const createRes = await fetch(`${base}/instance/create`, {
-        method: "POST",
+      // Restart da instância (reinicializa o Baileys sem deletar)
+      await fetch(`${base}/instance/restart/${instance}`, {
+        method: "PUT",
         headers,
-        body: JSON.stringify({ instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      const createData = await createRes.json().catch(() => ({}));
-      console.log("[whatsapp-qr] recreate:", JSON.stringify(createData).slice(0, 300));
-      await new Promise((r) => setTimeout(r, 2000));
+        signal: AbortSignal.timeout(10_000),
+      }).catch(() => {});
+      await new Promise((r) => setTimeout(r, 3000));
 
       // Segunda tentativa de connect
       const retry = await tryConnect();
       qrOk = retry.ok;
       qrStatus = retry.status;
       qrData = retry.data;
+
+      // Se ainda falhou, tenta recriar (último recurso)
+      if (!qrOk || qrData?.error === true) {
+        console.log("[whatsapp-qr] restart falhou, tentando delete+create...");
+        await fetch(`${base}/instance/delete/${instance}`, {
+          method: "DELETE",
+          headers,
+          signal: AbortSignal.timeout(10_000),
+        }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 2000));
+
+        await fetch(`${base}/instance/create`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
+          signal: AbortSignal.timeout(20_000),
+        }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 3000));
+
+        const retry2 = await tryConnect();
+        qrOk = retry2.ok;
+        qrStatus = retry2.status;
+        qrData = retry2.data;
+      }
     }
 
     if (!qrOk) {
