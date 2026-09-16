@@ -44,7 +44,7 @@ export async function GET() {
 
     if (listRes.status === 401 || listRes.status === 403) {
       return NextResponse.json(
-        { error: "API Key inválida. Verifique a variável AUTHENTICATION_API_KEY no Railway e atualize o campo 'API Key' aqui." },
+        { error: "API Key inválida. Verifique a variável AUTHENTICATION_API_KEY no Render e atualize o campo 'API Key' aqui." },
         { status: 502 }
       );
     }
