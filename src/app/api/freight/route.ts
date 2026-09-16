@@ -4,10 +4,6 @@ import { lookupCep, calculateFreight } from "@/lib/freight";
 
 const schema = z.object({
   cep: z.string().min(8).max(9),
-  weightGrams: z.number().positive(),
-  heightCm: z.number().positive(),
-  widthCm: z.number().positive(),
-  lengthCm: z.number().positive(),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "CEP inválido ou não encontrado." }, { status: 400 });
     }
 
-    const options = await calculateFreight({ cepDestino: data.cep, ...data });
+    const options = await calculateFreight({ cepDestino: data.cep });
 
     return NextResponse.json({ address, options });
   } catch (err) {

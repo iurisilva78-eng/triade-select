@@ -653,14 +653,21 @@ export default function ProdutoPage() {
                       border: "1px dashed var(--line-soft)",
                       padding: 32,
                       cursor: "pointer",
-                      gap: 8,
+                      gap: 6,
                     }}
                   >
                     <Upload size={24} style={{ color: "var(--gold)" }} />
                     <p style={{ fontSize: 13, color: "var(--muted)", margin: 0, textAlign: "center" }}>
                       Clique para enviar seu logo
                     </p>
-                    <p className="t-eyebrow" style={{ margin: 0 }}>PNG, JPG, PDF — máx. 10 MB</p>
+                    <p className="t-eyebrow" style={{ margin: 0 }}>PNG · JPG · PDF — máx. 10 MB</p>
+                    <div style={{ marginTop: 6, padding: "6px 14px", background: "var(--bg-2)", border: "1px solid var(--line-hair)", borderRadius: "var(--r-sm)", textAlign: "center" }}>
+                      <p className="t-mono" style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: 0, lineHeight: 1.8 }}>
+                        <span style={{ color: "var(--ink)" }}>Melhor qualidade:</span> PNG com fundo transparente<br />
+                        Mín. <span style={{ color: "var(--ink)" }}>500×500px</span> · Recomendado <span style={{ color: "var(--ink)" }}>1000×1000px</span> ou mais<br />
+                        Formatos vetoriais (PDF/AI) garantem impressão perfeita
+                      </p>
+                    </div>
                     <input
                       type="file"
                       accept=".png,.jpg,.jpeg,.pdf"

@@ -177,7 +177,7 @@ export default function CheckoutPage() {
       const res  = await fetch("/api/freight", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cep: clean, weightGrams: 500, heightCm: 10, widthCm: 20, lengthCm: 30 }),
+        body: JSON.stringify({ cep: clean }),
       });
       const data = await res.json();
       if (!res.ok) { setCepError(data.error); return; }
@@ -349,22 +349,36 @@ export default function CheckoutPage() {
                         alignItems: "center",
                         gap: 16,
                         cursor: "pointer",
+                        borderRadius: "var(--r-sm)",
                       }}
                     >
                       <input
                         type="radio"
                         checked={selectedFreight?.service === opt.service}
                         onChange={() => setSelectedFreight(opt)}
-                        style={{ accentColor: "var(--ink)" }}
+                        style={{ accentColor: "var(--ink)", flexShrink: 0 }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div className="t-display" style={{ fontSize: 17 }}>{opt.name}</div>
-                        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                          Prazo: {opt.deliveryDays} dias úteis após produção
+                        <div className="t-display" style={{ fontSize: 16 }}>{opt.name}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                          <span
+                            className="t-mono"
+                            style={{ fontSize: 10, letterSpacing: "0.1em", padding: "2px 8px", background: "var(--bg-2)", border: "1px solid var(--line-hair)", borderRadius: 2 }}
+                          >
+                            {opt.deliveryDays} dias úteis
+                          </span>
+                          <span style={{ fontSize: 11, color: "var(--muted)" }}>após envio</span>
                         </div>
                       </div>
-                      <div className="t-display" style={{ fontSize: 20 }}>
-                        {formatCurrency(opt.price)}
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div className="t-display" style={{ fontSize: 20 }}>
+                          {formatCurrency(opt.price)}
+                        </div>
+                        {opt.name.includes("estimativa") && (
+                          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                            valor aproximado
+                          </div>
+                        )}
                       </div>
                     </label>
                   ))}

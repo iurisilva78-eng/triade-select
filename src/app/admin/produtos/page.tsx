@@ -16,6 +16,9 @@ interface Product {
   priceWithCustom: number;
   productionDays: number;
   weightGrams: number;
+  heightCm: number;
+  widthCm: number;
+  lengthCm: number;
   active: boolean;
   images: string[];
   colorImages: Record<string, string>;
@@ -100,9 +103,9 @@ export default function AdminProdutosPage() {
       priceWithCustom: String(product.priceWithCustom),
       productionDays: String(product.productionDays),
       weightGrams: String(product.weightGrams),
-      heightCm: "5",
-      widthCm: "20",
-      lengthCm: "30",
+      heightCm: String(product.heightCm ?? 2),
+      widthCm: String(product.widthCm ?? 15),
+      lengthCm: String(product.lengthCm ?? 20),
       allowsCustomization: true,
       mockupType: (product as any).mockupType ?? "capa",
       images: product.images ?? [],
@@ -311,9 +314,14 @@ export default function AdminProdutosPage() {
 
               {/* ── Fotos do produto ── */}
               <div>
-                <label className="text-sm font-semibold text-[var(--text)] block mb-2">
-                  Fotos do produto
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">
+                    Fotos do produto
+                  </label>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-0.5">
+                    Ideal: 800×800px · PNG/JPG · fundo branco
+                  </span>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {form.images.map((url, idx) => (
                     <div key={idx} className="relative w-24 h-24 group">
@@ -329,6 +337,11 @@ export default function AdminProdutosPage() {
                       >
                         <X size={10} />
                       </button>
+                      {idx === 0 && (
+                        <span className="absolute bottom-1 left-1 text-[8px] font-mono bg-black/60 text-white px-1 py-0.5 rounded">
+                          CAPA
+                        </span>
+                      )}
                     </div>
                   ))}
 
@@ -358,7 +371,7 @@ export default function AdminProdutosPage() {
                   </label>
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mt-1.5">
-                  A primeira foto será usada como capa. Em produção configure IMGBB_API_KEY no Netlify.
+                  A primeira foto é usada como capa. Tamanho mínimo: 800×800px · máx. 5MB · JPG ou PNG.
                 </p>
               </div>
 
@@ -446,7 +459,7 @@ export default function AdminProdutosPage() {
                     {/* Fotos por cor */}
                     {toArray(form.availableColors).length > 0 && (
                       <div className="mt-2 space-y-2">
-                        <p className="text-xs text-[var(--text-muted)] font-medium">📸 Foto de mockup por cor (opcional — substitui o mockup genérico)</p>
+                        <p className="text-xs text-[var(--text-muted)] font-medium">📸 Foto de mockup por cor (opcional) — substitui o mockup genérico · Ideal: 800×1000px, fundo branco, PNG</p>
                         {toArray(form.availableColors).map((color) => (
                           <div key={color} className="flex items-center gap-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5">
                             <span className="text-sm text-[var(--text-secondary)] min-w-[100px]">{color}</span>

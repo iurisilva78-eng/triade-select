@@ -652,7 +652,8 @@ function ImageUploadField({
         </label>
       </div>
       <p className="text-xs text-[var(--text-muted)]">
-        Cole uma URL pública ou faça upload. Formatos: JPG, PNG, WebP.
+        Cole uma URL pública ou faça upload. Formatos: JPG, PNG, WebP · máx. 5MB.
+        <span className="block mt-0.5 text-[var(--gold)]">Imagem de hero: ideal 1920×1080px. Banners: 1200×400px. Logos: PNG com fundo transparente.</span>
       </p>
     </div>
   );
