@@ -34,8 +34,12 @@ export async function POST(req: NextRequest) {
       },
     });
     return NextResponse.json(coupon);
-  } catch {
-    return NextResponse.json({ error: "Código já existe." }, { status: 409 });
+  } catch (err: any) {
+    const isDup = err?.code === "P2002";
+    return NextResponse.json(
+      { error: isDup ? "Código já existe." : "Erro ao criar cupom.", _raw: { code: err?.code, message: err?.message } },
+      { status: isDup ? 409 : 500 }
+    );
   }
 }
 

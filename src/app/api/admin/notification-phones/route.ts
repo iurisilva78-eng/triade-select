@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
     const { name, phone } = schema.parse(await req.json());
     const record = await prisma.notificationPhone.create({ data: { name, phone } });
     return NextResponse.json(record, { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.issues?.[0]?.message }, { status: 400 });
-    return NextResponse.json({ error: "Erro interno." }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno.", _raw: { code: err?.code, message: err?.message } }, { status: 500 });
   }
 }
 

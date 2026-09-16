@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2, X, Check, Upload, RefreshCw, ImageIcon } from "lucide-react";
+import { AdminErrorBox } from "@/components/admin/AdminErrorBox";
 
 interface Product {
   id: string;
@@ -66,7 +67,7 @@ export default function AdminProdutosPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ msg: string; raw?: unknown } | null>(null);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -89,7 +90,7 @@ export default function AdminProdutosPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
-    setError("");
+    setError(null);
     setShowForm(true);
   };
 
@@ -114,7 +115,7 @@ export default function AdminProdutosPage() {
       availableSizes: (product.availableSizes ?? []).join(", "),
       availableClosures: (product.availableClosures ?? []).join(", "),
     });
-    setError("");
+    setError(null);
     setShowForm(true);
   };
 
@@ -173,15 +174,15 @@ export default function AdminProdutosPage() {
     str.split(",").map((s) => s.trim()).filter(Boolean);
 
   const handleSave = async () => {
-    setError("");
+    setError(null);
 
     // Validação local antes de enviar
-    if (!form.name.trim()) { setError("Informe o nome do produto."); return; }
-    if (!form.description.trim()) { setError("Informe a descrição."); return; }
-    if (!form.categoryId) { setError("Selecione uma categoria."); return; }
-    if (!form.priceBase || isNaN(parseFloat(form.priceBase))) { setError("Informe o preço base."); return; }
-    if (!form.priceWithCustom || isNaN(parseFloat(form.priceWithCustom))) { setError("Informe o preço com logo."); return; }
-    if (!form.weightGrams || isNaN(parseInt(form.weightGrams))) { setError("Informe o peso."); return; }
+    if (!form.name.trim()) { setError({ msg: "Informe o nome do produto." }); return; }
+    if (!form.description.trim()) { setError({ msg: "Informe a descrição." }); return; }
+    if (!form.categoryId) { setError({ msg: "Selecione uma categoria." }); return; }
+    if (!form.priceBase || isNaN(parseFloat(form.priceBase))) { setError({ msg: "Informe o preço base." }); return; }
+    if (!form.priceWithCustom || isNaN(parseFloat(form.priceWithCustom))) { setError({ msg: "Informe o preço com logo." }); return; }
+    if (!form.weightGrams || isNaN(parseInt(form.weightGrams))) { setError({ msg: "Informe o peso." }); return; }
 
     setSaving(true);
 
@@ -215,7 +216,7 @@ export default function AdminProdutosPage() {
     setSaving(false);
 
     if (!res.ok) {
-      setError(data.error ?? "Erro ao salvar.");
+      setError({ msg: data.error ?? "Erro ao salvar.", raw: data._raw ?? data });
       return;
     }
 
@@ -505,11 +506,7 @@ export default function AdminProdutosPage() {
                 </div>
               </div>
 
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
+              {error && <AdminErrorBox message={error.msg} raw={error.raw} />}
 
               <div className="flex gap-3 pt-2">
                 <Button variant="secondary" className="flex-1" onClick={() => setShowForm(false)}>

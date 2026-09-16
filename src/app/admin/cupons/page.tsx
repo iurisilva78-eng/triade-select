@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Check, X, Tag, ToggleLeft, ToggleRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { AdminErrorBox } from "@/components/admin/AdminErrorBox";
 
 interface Coupon {
   id: string;
@@ -33,7 +34,7 @@ export default function CuponsPage() {
   const [maxUses, setMaxUses]       = useState("");
   const [expiresAt, setExpiresAt]   = useState("");
   const [saving, setSaving]         = useState(false);
-  const [error, setError]           = useState("");
+  const [error, setError]           = useState<{ msg: string; raw?: unknown } | null>(null);
 
   const load = () => {
     fetch("/api/admin/coupons").then(r => r.json()).then(d => { setCoupons(d); setLoading(false); });
@@ -42,8 +43,8 @@ export default function CuponsPage() {
   useEffect(() => { load(); }, []);
 
   const handleCreate = async () => {
-    setError("");
-    if (!code || !value) { setError("Código e valor são obrigatórios."); return; }
+    setError(null);
+    if (!code || !value) { setError({ msg: "Código e valor são obrigatórios." }); return; }
     setSaving(true);
     const res = await fetch("/api/admin/coupons", {
       method: "POST",
@@ -52,7 +53,7 @@ export default function CuponsPage() {
     });
     const data = await res.json();
     setSaving(false);
-    if (!res.ok) { setError(data.error ?? "Erro."); return; }
+    if (!res.ok) { setError({ msg: data.error ?? "Erro.", raw: data._raw ?? data }); return; }
     setShowForm(false);
     setCode(""); setDescription(""); setValue(""); setMinOrder("0"); setMaxUses(""); setExpiresAt("");
     load();
@@ -129,7 +130,7 @@ export default function CuponsPage() {
                 className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[var(--gold)]" />
             </div>
           </div>
-          {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
+          {error && <AdminErrorBox message={error.msg} raw={error.raw} className="mt-3" />}
           <div className="flex gap-3 mt-4">
             <Button onClick={handleCreate} loading={saving}><Check size={14} /> Criar cupom</Button>
             <Button variant="outline" onClick={() => setShowForm(false)}><X size={14} /> Cancelar</Button>

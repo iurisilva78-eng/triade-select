@@ -6,6 +6,7 @@ import {
   Plus, Trash2, Bell, BellOff, Save, Check,
   Users, RefreshCw, ChevronDown, Wifi, WifiOff, Send, Eye, EyeOff, Smartphone, QrCode,
 } from "lucide-react";
+import { AdminErrorBox } from "@/components/admin/AdminErrorBox";
 
 interface NotifPhone { id: string; name: string; phone: string; active: boolean; }
 
@@ -42,7 +43,7 @@ export default function ConfiguracoesPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connStatus, setConnStatus] = useState<"unknown" | "connected" | "disconnected">("unknown");
   const [loadingQr, setLoadingQr] = useState(false);
-  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<{ msg: string; raw?: unknown } | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const qrInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -51,7 +52,7 @@ export default function ConfiguracoesPage() {
   const [pairingPhone, setPairingPhone] = useState("");
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [loadingPairing, setLoadingPairing] = useState(false);
-  const [pairingError, setPairingError] = useState<string | null>(null);
+  const [pairingError, setPairingError] = useState<{ msg: string; raw?: unknown } | null>(null);
 
   /* ── Diagnóstico Meta ── */
   const [diagLoading, setDiagLoading] = useState(false);
@@ -153,7 +154,7 @@ export default function ConfiguracoesPage() {
       const res = await fetch("/api/admin/whatsapp-qr");
       const data = await res.json();
       if (!res.ok) {
-        setQrError(data.error ?? `Erro ${res.status} ao verificar status.`);
+        setQrError({ msg: data.error ?? `Erro ${res.status} ao verificar status.`, raw: data._raw ?? data });
         setConnStatus("disconnected");
         return;
       }
@@ -164,12 +165,11 @@ export default function ConfiguracoesPage() {
         setConnStatus("disconnected");
         setQrCode(data.qrCode ?? null);
         if (!data.qrCode) {
-          const debugInfo = data._debug ? ` | Resposta bruta: ${JSON.stringify(data._debug).slice(0, 300)}` : "";
-          setQrError(`QR Code não retornado pela Evolution API.${debugInfo}`);
+          setQrError({ msg: "QR Code não retornado pela Evolution API.", raw: data._debug ?? data });
         }
       }
     } catch (err: any) {
-      setQrError("Falha de rede ao contatar a API. Verifique a URL da Evolution API.");
+      setQrError({ msg: "Falha de rede ao contatar a API. Verifique a URL da Evolution API." });
       setConnStatus("disconnected");
     } finally { setLoadingQr(false); }
   };
@@ -181,7 +181,7 @@ export default function ConfiguracoesPage() {
     const postRes = await fetch("/api/admin/whatsapp-qr", { method: "POST" });
     if (!postRes.ok) {
       const postData = await postRes.json();
-      setQrError(postData.error ?? `Erro ${postRes.status} ao criar instância.`);
+      setQrError({ msg: postData.error ?? `Erro ${postRes.status} ao criar instância.`, raw: postData._raw ?? postData });
       setLoadingQr(false);
       return;
     }
@@ -213,7 +213,7 @@ export default function ConfiguracoesPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.pairingCode) {
-        setPairingError(data.error ?? "Código não retornado pela API.");
+        setPairingError({ msg: data.error ?? "Código não retornado pela API.", raw: data._raw ?? data });
       } else {
         setPairingCode(data.pairingCode);
         // Poll para detectar quando conectar
@@ -230,7 +230,7 @@ export default function ConfiguracoesPage() {
         }, 5000);
       }
     } catch {
-      setPairingError("Falha de rede ao contatar a API.");
+      setPairingError({ msg: "Falha de rede ao contatar a API." });
     } finally {
       setLoadingPairing(false);
     }
@@ -616,7 +616,7 @@ export default function ConfiguracoesPage() {
                     </button>
                   </div>
                   {pairingError && (
-                    <p className="text-xs text-red-400 mt-2">{pairingError}</p>
+                    <AdminErrorBox message={pairingError.msg} raw={pairingError.raw} className="mt-2" />
                   )}
                   {pairingCode && (
                     <div className="mt-3 p-4 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-xl text-center">
@@ -640,14 +640,7 @@ export default function ConfiguracoesPage() {
             )}
 
             {qrError && (
-              <div className="mt-3 flex items-start gap-2 text-sm px-4 py-3 rounded-xl border bg-red-500/10 border-red-500/30 text-red-400">
-                <WifiOff size={14} className="mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-semibold mb-0.5">Erro ao contatar a Evolution API</p>
-                  <p className="text-xs opacity-80">{qrError}</p>
-                  <p className="text-xs opacity-60 mt-1">Dica: salve as credenciais e clique em "Verificar credenciais" para diagnóstico.</p>
-                </div>
-              </div>
+              <AdminErrorBox message={qrError.msg} raw={qrError.raw} className="mt-3" />
             )}
 
             {qrCode && connStatus !== "connected" && (
