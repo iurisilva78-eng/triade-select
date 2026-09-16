@@ -338,50 +338,68 @@ export default function CheckoutPage() {
               <div style={{ marginBottom: 32 }}>
                 <hr style={{ border: 0, borderTop: "1px solid var(--line-soft)", marginBottom: 24 }} />
                 <p className="t-eyebrow mb-4">— Modo de envio</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {freightOptions.map((opt) => (
-                    <label
-                      key={opt.service}
-                      style={{
-                        display: "flex",
-                        padding: 20,
-                        border: `1px solid ${selectedFreight?.service === opt.service ? "var(--ink)" : "var(--line-soft)"}`,
-                        alignItems: "center",
-                        gap: 16,
-                        cursor: "pointer",
-                        borderRadius: "var(--r-sm)",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        checked={selectedFreight?.service === opt.service}
-                        onChange={() => setSelectedFreight(opt)}
-                        style={{ accentColor: "var(--ink)", flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div className="t-display" style={{ fontSize: 16 }}>{opt.name}</div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                          <span
-                            className="t-mono"
-                            style={{ fontSize: 10, letterSpacing: "0.1em", padding: "2px 8px", background: "var(--bg-2)", border: "1px solid var(--line-hair)", borderRadius: 2 }}
-                          >
-                            {opt.deliveryDays} dias úteis
-                          </span>
-                          <span style={{ fontSize: 11, color: "var(--muted)" }}>após envio</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {freightOptions.map((opt) => {
+                    const selected = selectedFreight?.service === opt.service;
+                    return (
+                      <label
+                        key={opt.service}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "20px 1fr auto",
+                          alignItems: "center",
+                          gap: "0 12px",
+                          padding: "16px 18px",
+                          border: `1px solid ${selected ? "var(--ink)" : "var(--line-soft)"}`,
+                          background: selected ? "var(--bg-2)" : "transparent",
+                          cursor: "pointer",
+                          borderRadius: "var(--r-sm)",
+                          transition: "border-color 0.15s, background 0.15s",
+                        }}
+                      >
+                        {/* Radio */}
+                        <input
+                          type="radio"
+                          checked={selected}
+                          onChange={() => setSelectedFreight(opt)}
+                          style={{ accentColor: "var(--ink)", width: 16, height: 16, cursor: "pointer" }}
+                        />
+
+                        {/* Nome + prazo */}
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "var(--ink)",
+                            margin: 0,
+                            lineHeight: 1.3,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}>
+                            {opt.name}
+                          </p>
+                          <p style={{ fontSize: 12, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1 }}>
+                            {opt.deliveryDays} dias úteis após envio
+                            {opt.name.includes("estimativa") && " · estimativa"}
+                          </p>
                         </div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div className="t-display" style={{ fontSize: 20 }}>
-                          {formatCurrency(opt.price)}
+
+                        {/* Preço */}
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <p style={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: "var(--ink)",
+                            margin: 0,
+                            whiteSpace: "nowrap",
+                          }}>
+                            {formatCurrency(opt.price)}
+                          </p>
                         </div>
-                        {opt.name.includes("estimativa") && (
-                          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
-                            valor aproximado
-                          </div>
-                        )}
-                      </div>
-                    </label>
-                  ))}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
