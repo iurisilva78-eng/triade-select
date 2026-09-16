@@ -24,7 +24,7 @@ interface Order {
   items: { quantity: number; product: { name: string }; selectedColor?: string; selectedSize?: string; selectedClosure?: string }[];
 }
 
-type Tab = "status" | "payment" | "whatsapp";
+type Tab = "status" | "payment" | "valor" | "whatsapp";
 
 export default function AdminPedidosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -41,6 +41,10 @@ export default function AdminPedidosPage() {
   // Payment tab
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("PIX");
+
+  // Valor tab
+  const [newTotal, setNewTotal] = useState("");
+  const [totalNote, setTotalNote] = useState("");
 
   // WhatsApp tab
   const [waMessage, setWaMessage] = useState("");
@@ -70,6 +74,8 @@ export default function AdminPedidosPage() {
     setStatusNote("");
     setPayAmount("");
     setPayMethod("PIX");
+    setNewTotal("");
+    setTotalNote("");
     setWaMessage("");
     setError("");
     setSuccess("");
@@ -88,6 +94,10 @@ export default function AdminPedidosPage() {
       const amount = parseFloat(payAmount.replace(",", "."));
       if (!amount || amount <= 0) { setError("Valor inválido."); setUpdating(false); return; }
       body = { payment: { amount, method: payMethod } };
+    } else if (tab === "valor") {
+      const total = parseFloat(newTotal.replace(",", "."));
+      if (!total || total <= 0) { setError("Informe um valor válido."); setUpdating(false); return; }
+      body = { adjustTotal: total, ...(totalNote ? { note: totalNote } : {}) };
     } else if (tab === "whatsapp") {
       if (!waMessage.trim()) { setError("Digite uma mensagem."); setUpdating(false); return; }
       if (!selected.user.phone) { setError("Este cliente não tem WhatsApp cadastrado."); setUpdating(false); return; }
@@ -105,7 +115,7 @@ export default function AdminPedidosPage() {
 
     if (!res.ok) { setError(data.error ?? "Erro ao atualizar."); return; }
 
-    setSuccess(tab === "payment" ? "Pagamento registrado!" : tab === "whatsapp" ? "Mensagem enviada!" : "Status atualizado!");
+    setSuccess(tab === "payment" ? "Pagamento registrado!" : tab === "whatsapp" ? "Mensagem enviada!" : tab === "valor" ? "Valor atualizado!" : "Status atualizado!");
     load();
     if (tab === "status") setTimeout(() => { setSelected(null); }, 1000);
   };
@@ -337,7 +347,7 @@ export default function AdminPedidosPage() {
 
             {/* Tabs */}
             <div className="flex gap-1 bg-[var(--surface-2)] rounded-xl p-1 mb-4">
-              {([["status", "Status"], ["payment", "Pagamento"], ["whatsapp", "WhatsApp"]] as const).map(([t, label]) => (
+              {([["status", "Status"], ["payment", "Pagamento"], ["valor", "Valor"], ["whatsapp", "WhatsApp"]] as const).map(([t, label]) => (
                 <button key={t} onClick={() => { setTab(t); setError(""); setSuccess(""); }}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === t ? "bg-[var(--gold)] text-black" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}>
                   {label}
@@ -409,6 +419,37 @@ export default function AdminPedidosPage() {
               </div>
             )}
 
+            {/* Tab: Valor */}
+            {tab === "valor" && (
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-amber-400 text-xs">
+                  ⚠ Alterar o valor total do pedido. Use para pedidos presenciais ou condições especiais.
+                </div>
+                <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 text-sm">
+                  <div className="flex justify-between text-[var(--text-secondary)]">
+                    <span>Valor atual</span>
+                    <span className="font-bold text-[var(--text)]">{formatCurrency(selected.total)}</span>
+                  </div>
+                  {selected.paidAmount > 0 && (
+                    <div className="flex justify-between text-[var(--text-secondary)] mt-1">
+                      <span>Já pago</span>
+                      <span className="font-bold text-green-400">{formatCurrency(selected.paidAmount)}</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Novo valor total (R$)</label>
+                  <input type="text" placeholder="Ex: 250,00" value={newTotal} onChange={(e) => setNewTotal(e.target.value)}
+                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)]" />
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Motivo (opcional)</label>
+                  <input type="text" placeholder="Ex: Desconto presencial, pedido especial…" value={totalNote} onChange={(e) => setTotalNote(e.target.value)}
+                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)]" />
+                </div>
+              </div>
+            )}
+
             {/* Tab: WhatsApp */}
             {tab === "whatsapp" && (
               <div className="flex flex-col gap-3 mb-4">
@@ -444,7 +485,7 @@ export default function AdminPedidosPage() {
             <div className="flex gap-3">
               <Button variant="secondary" className="flex-1" onClick={() => setSelected(null)}>Fechar</Button>
               <Button className="flex-1" onClick={handleUpdate} loading={updating}>
-                {tab === "payment" ? <><DollarSign size={14} /> Registrar</> : tab === "whatsapp" ? <><MessageCircle size={14} /> Enviar</> : "Salvar"}
+                {tab === "payment" ? <><DollarSign size={14} /> Registrar</> : tab === "whatsapp" ? <><MessageCircle size={14} /> Enviar</> : tab === "valor" ? "Atualizar valor" : "Salvar"}
               </Button>
             </div>
           </div>
