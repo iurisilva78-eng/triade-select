@@ -115,22 +115,54 @@ export async function GET() {
       }
     }
 
-    /* ── 4. Busca QR code ── */
-    const qrRes = await fetch(`${base}/instance/connect/${instance}`, {
-      headers,
-      signal: AbortSignal.timeout(15_000),
-    });
+    /* ── 4. Busca QR code (com retry após recriar instância corrompida) ── */
+    const tryConnect = async () => {
+      const r = await fetch(`${base}/instance/connect/${instance}`, {
+        headers,
+        signal: AbortSignal.timeout(15_000),
+      });
+      const d = await r.json().catch(() => ({}));
+      console.log("[whatsapp-qr] connect response:", JSON.stringify(d).slice(0, 500));
+      return { ok: r.ok, status: r.status, data: d };
+    };
 
-    if (!qrRes.ok) {
-      const body = await qrRes.text().catch(() => "");
+    let { ok: qrOk, status: qrStatus, data: qrData } = await tryConnect();
+
+    // Instância corrompida (ex: Render reiniciou e perdeu arquivos locais)
+    // Detectado quando connect retorna erro mas a instância existe
+    if (!qrOk || qrData?.error === true) {
+      console.log("[whatsapp-qr] connect falhou, recriando instância...");
+      await fetch(`${base}/instance/delete/${instance}`, {
+        method: "DELETE",
+        headers,
+        signal: AbortSignal.timeout(10_000),
+      }).catch(() => {});
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const createRes = await fetch(`${base}/instance/create`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const createData = await createRes.json().catch(() => ({}));
+      console.log("[whatsapp-qr] recreate:", JSON.stringify(createData).slice(0, 300));
+      await new Promise((r) => setTimeout(r, 2000));
+
+      // Segunda tentativa de connect
+      const retry = await tryConnect();
+      qrOk = retry.ok;
+      qrStatus = retry.status;
+      qrData = retry.data;
+    }
+
+    if (!qrOk) {
       return NextResponse.json(
-        { error: `Erro ao buscar QR Code (${qrRes.status}): ${body.slice(0, 300)}` },
+        { error: `Erro ao buscar QR Code (${qrStatus}): ${JSON.stringify(qrData).slice(0, 300)}` },
         { status: 502 }
       );
     }
 
-    const qrData = await qrRes.json();
-    console.log("[whatsapp-qr] connect response:", JSON.stringify(qrData).slice(0, 500));
     const qrCode =
       qrData?.code ??
       qrData?.qrcode?.code ??
