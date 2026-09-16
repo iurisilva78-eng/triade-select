@@ -63,6 +63,11 @@ export default function ConfiguracoesPage() {
   const [groupsError, setGroupsError] = useState("");
   const [showGroupList, setShowGroupList] = useState(false);
 
+  /* ── PIN do vendedor ── */
+  const [vendorPin, setVendorPin] = useState("");
+  const [savingPin, setSavingPin] = useState(false);
+  const [savedPin, setSavedPin] = useState(false);
+
   /* ── Load ── */
   const loadPhones = () => {
     fetch("/api/admin/notification-phones").then(r => r.json()).then(d => { setPhones(d); setLoadingPhones(false); });
@@ -82,6 +87,7 @@ export default function ConfiguracoesPage() {
     setMetaPhoneId(g("whatsapp_meta_phone_id"));
     setMetaToken(g("whatsapp_meta_token"));
     if (g("whatsapp_group_id")) setGroupId(g("whatsapp_group_id"));
+    if (g("vendor_pin")) setVendorPin(g("vendor_pin"));
     return { provider: savedProvider, evoBaseUrl: g("whatsapp_evo_base_url"), evoApiKey: g("whatsapp_evo_api_key") };
   };
 
@@ -240,6 +246,13 @@ export default function ConfiguracoesPage() {
     setSavingGroup(true);
     await fetch("/api/admin/site-config", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ key: "whatsapp_group_id", value: groupId.trim() }]) });
     setSavingGroup(false); setSavedGroup(true); setTimeout(() => setSavedGroup(false), 3000);
+  };
+
+  const handleSavePin = async () => {
+    if (!vendorPin.trim()) return;
+    setSavingPin(true);
+    await fetch("/api/admin/site-config", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ key: "vendor_pin", value: vendorPin.trim(), label: "PIN do Vendedor", type: "text", section: "vendedor" }]) });
+    setSavingPin(false); setSavedPin(true); setTimeout(() => setSavedPin(false), 3000);
   };
 
   const handleAdd = async () => {
@@ -624,6 +637,34 @@ export default function ConfiguracoesPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* ── PIN do Vendedor ── */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mt-6">
+        <h2 className="font-bold text-[var(--text)] mb-1">Vendedor externo</h2>
+        <p className="text-sm text-[var(--text-muted)] mb-4">
+          PIN de acesso para a interface simplificada de lançamento de pedidos ({" "}
+          <a href="/vendedor" target="_blank" rel="noopener noreferrer" className="text-[var(--gold)] hover:underline">
+            /vendedor
+          </a>
+          ). Padrão: <code className="font-mono">1234</code>.
+        </p>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">PIN (somente números)</label>
+            <input
+              type="text"
+              placeholder="Ex: 5678"
+              value={vendorPin}
+              onChange={(e) => setVendorPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              maxLength={8}
+              className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--gold)] font-mono tracking-widest"
+            />
+          </div>
+          <Button onClick={handleSavePin} loading={savingPin} disabled={!vendorPin} className="flex items-center gap-2 shrink-0">
+            {savedPin ? <><Check size={14} /> Salvo!</> : <><Save size={14} /> Salvar</>}
+          </Button>
+        </div>
       </div>
     </div>
   );
