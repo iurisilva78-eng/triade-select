@@ -6,6 +6,7 @@ import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_FLOW } from "@/t
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, X, MessageCircle, DollarSign, AlertCircle, MapPin, CheckSquare, Square, Layers } from "lucide-react";
+import { AdminErrorBox } from "@/components/admin/AdminErrorBox";
 import type { OrderStatus } from "@prisma/client";
 
 interface Order {
@@ -50,7 +51,7 @@ export default function AdminPedidosPage() {
   const [waMessage, setWaMessage] = useState("");
 
   const [updating, setUpdating] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ msg: string; raw?: unknown } | null>(null);
   const [success, setSuccess] = useState("");
 
   // Seleção em lote
@@ -77,30 +78,30 @@ export default function AdminPedidosPage() {
     setNewTotal("");
     setTotalNote("");
     setWaMessage("");
-    setError("");
+    setError(null);
     setSuccess("");
   };
 
   const handleUpdate = async () => {
     if (!selected) return;
-    setUpdating(true); setError(""); setSuccess("");
+    setUpdating(true); setError(null); setSuccess("");
 
     let body: any = {};
 
     if (tab === "status") {
-      if (!newStatus) { setError("Selecione um status."); setUpdating(false); return; }
+      if (!newStatus) { setError({ msg: "Selecione um status." }); setUpdating(false); return; }
       body = { status: newStatus, ...(trackingCode ? { trackingCode } : {}), ...(statusNote ? { note: statusNote } : {}) };
     } else if (tab === "payment") {
       const amount = parseFloat(payAmount.replace(",", "."));
-      if (!amount || amount <= 0) { setError("Valor inválido."); setUpdating(false); return; }
+      if (!amount || amount <= 0) { setError({ msg: "Valor inválido." }); setUpdating(false); return; }
       body = { payment: { amount, method: payMethod } };
     } else if (tab === "valor") {
       const total = parseFloat(newTotal.replace(",", "."));
-      if (!total || total <= 0) { setError("Informe um valor válido."); setUpdating(false); return; }
+      if (!total || total <= 0) { setError({ msg: "Informe um valor válido." }); setUpdating(false); return; }
       body = { adjustTotal: total, ...(totalNote ? { note: totalNote } : {}) };
     } else if (tab === "whatsapp") {
-      if (!waMessage.trim()) { setError("Digite uma mensagem."); setUpdating(false); return; }
-      if (!selected.user.phone) { setError("Este cliente não tem WhatsApp cadastrado."); setUpdating(false); return; }
+      if (!waMessage.trim()) { setError({ msg: "Digite uma mensagem." }); setUpdating(false); return; }
+      if (!selected.user.phone) { setError({ msg: "Este cliente não tem WhatsApp cadastrado." }); setUpdating(false); return; }
       body = { whatsappMessage: waMessage };
     }
 
@@ -113,7 +114,7 @@ export default function AdminPedidosPage() {
     const data = await res.json();
     setUpdating(false);
 
-    if (!res.ok) { setError(data.error ?? "Erro ao atualizar."); return; }
+    if (!res.ok) { setError({ msg: data.error ?? "Erro ao atualizar.", raw: data._raw ?? data }); return; }
 
     setSuccess(tab === "payment" ? "Pagamento registrado!" : tab === "whatsapp" ? "Mensagem enviada!" : tab === "valor" ? "Valor atualizado!" : "Status atualizado!");
     load();
@@ -122,10 +123,11 @@ export default function AdminPedidosPage() {
 
   const handleDenyCancel = async () => {
     if (!selected) return;
-    setUpdating(true); setError("");
+    setUpdating(true); setError(null);
     const res = await fetch(`/api/orders/${selected.id}/cancel-request`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
     setUpdating(false);
-    if (!res.ok) { setError("Erro ao negar cancelamento."); return; }
+    if (!res.ok) { setError({ msg: "Erro ao negar cancelamento.", raw: data }); return; }
     setSuccess("Cancelamento negado.");
     load();
     setSelected((prev) => prev ? { ...prev, cancelRequestedAt: null } : null);
@@ -348,7 +350,7 @@ export default function AdminPedidosPage() {
             {/* Tabs */}
             <div className="flex gap-1 bg-[var(--surface-2)] rounded-xl p-1 mb-4">
               {([["status", "Status"], ["payment", "Pagamento"], ["valor", "Valor"], ["whatsapp", "WhatsApp"]] as const).map(([t, label]) => (
-                <button key={t} onClick={() => { setTab(t); setError(""); setSuccess(""); }}
+                <button key={t} onClick={() => { setTab(t); setError(null); setSuccess(""); }}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === t ? "bg-[var(--gold)] text-black" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}>
                   {label}
                 </button>
@@ -479,7 +481,7 @@ export default function AdminPedidosPage() {
               </div>
             )}
 
-            {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 text-red-400 text-sm">{error}</div>}
+            {error && <AdminErrorBox message={error.msg} raw={error.raw} className="mb-4" />}
             {success && <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 mb-4 text-green-400 text-sm">✓ {success}</div>}
 
             <div className="flex gap-3">

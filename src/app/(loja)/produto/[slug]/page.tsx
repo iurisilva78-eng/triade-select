@@ -7,8 +7,8 @@ import { formatCurrency } from "@/lib/utils";
 import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight, Maximize2, ChevronDown } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
-import { SizeGuide } from "@/components/produto/SizeGuide";
 import { removeImageBackground } from "@/lib/remove-bg";
+import { SizeGuide } from "@/components/produto/SizeGuide";
 
 interface Product {
   id: string;
@@ -645,8 +645,8 @@ export default function ProdutoPage() {
                   Seu logotipo <span style={{ color: "#c0392b" }}>*</span>
                 </p>
                 {removingBg ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 14, border: "1px solid var(--line-soft)", background: "var(--bg-2)", color: "#f59e0b", fontSize: 13 }}>
-                    <span style={{ fontSize: 18 }}>⏳</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 14px", border: "1px solid var(--line-soft)", background: "var(--bg-2)", fontSize: 13, color: "var(--muted)" }}>
+                    <span style={{ fontSize: 18 }}>✂️</span>
                     Removendo fundo automaticamente…
                   </div>
                 ) : logoPreview ? (

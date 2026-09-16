@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         error: `Meta API (${res.status}): ${metaMsg}${hint ? `\n\n${hint}` : ""}`,
         code,
+        _raw: err,
       }, { status: 502 });
     }
 
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
   if (!ok) {
     return NextResponse.json({
       error: "Falha ao enviar. Verifique as credenciais e se o WhatsApp está conectado.",
+      _raw: { provider: cfg.provider, instance: (cfg as any).evoInstance },
     }, { status: 500 });
   }
 
@@ -110,7 +112,7 @@ export async function GET() {
     let hint = "";
     if (code === 190) hint = "Token expirado. Gere um novo em Meta Business Suite → System Users.";
     else if (code === 100) hint = "Phone Number ID inválido. Copie o ID correto de Meta → WhatsApp → Configuração da API.";
-    return NextResponse.json({ error: msg, hint, code }, { status: 502 });
+    return NextResponse.json({ error: msg, hint, code, _raw: data }, { status: 502 });
   }
 
   return NextResponse.json({

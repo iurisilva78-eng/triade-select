@@ -22,7 +22,10 @@ export async function GET() {
         `${cfg.evoBaseUrl}/group/fetchAllGroups/${cfg.evoInstance}?getParticipants=false`,
         { headers: { apikey: cfg.evoApiKey } }
       );
-      if (!res.ok) return NextResponse.json({ error: `Erro Evolution API: ${res.status}` }, { status: 502 });
+      if (!res.ok) {
+        const raw = await res.json().catch(() => ({}));
+        return NextResponse.json({ error: `Erro Evolution API: ${res.status}`, _raw: raw }, { status: 502 });
+      }
       const data = await res.json();
       const groups = Array.isArray(data) ? data : [];
       return NextResponse.json(
@@ -36,14 +39,17 @@ export async function GET() {
     const res = await fetch(`${base}/groups`, {
       headers: { "Content-Type": "application/json", ...(cfg.zapiClientToken ? { "Client-Token": cfg.zapiClientToken } : {}) },
     });
-    if (!res.ok) return NextResponse.json({ error: `Erro Z-API: ${res.status}` }, { status: 502 });
+    if (!res.ok) {
+      const raw = await res.json().catch(() => ({}));
+      return NextResponse.json({ error: `Erro Z-API: ${res.status}`, _raw: raw }, { status: 502 });
+    }
     const data = await res.json();
     const groups = Array.isArray(data) ? data : (data.groups ?? data.data ?? []);
     return NextResponse.json(
       groups.map((g: any) => ({ id: g.phone ?? g.id, name: g.name ?? g.subject ?? g.phone })).filter((g: any) => g.id)
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("[whatsapp-groups]", err);
-    return NextResponse.json({ error: "Erro ao buscar grupos." }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao buscar grupos.", _raw: { message: err?.message, code: err?.code } }, { status: 500 });
   }
 }
