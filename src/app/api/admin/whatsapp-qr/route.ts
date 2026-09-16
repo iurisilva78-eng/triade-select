@@ -181,7 +181,9 @@ export async function POST() {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      if (res.status === 409 || String(data?.message ?? "").toLowerCase().includes("already")) {
+      const dText = JSON.stringify(data).toLowerCase();
+      // Trata qualquer falha de criação como "instância já existe" — o polling do GET vai buscar o QR
+      if (res.status === 409 || dText.includes("already") || res.status === 403 || res.status === 400) {
         return NextResponse.json({ created: false, message: "Instância já existe." });
       }
       return NextResponse.json(
