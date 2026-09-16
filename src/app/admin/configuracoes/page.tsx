@@ -47,6 +47,12 @@ export default function ConfiguracoesPage() {
   const [verifyResult, setVerifyResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const qrInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /* ── Pairing Code ── */
+  const [pairingPhone, setPairingPhone] = useState("");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [loadingPairing, setLoadingPairing] = useState(false);
+  const [pairingError, setPairingError] = useState<string | null>(null);
+
   /* ── Diagnóstico Meta ── */
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagResult, setDiagResult] = useState<{ ok: boolean; data?: any; error?: string; hint?: string } | null>(null);
@@ -187,6 +193,44 @@ export default function ConfiguracoesPage() {
         clearInterval(qrInterval.current!); qrInterval.current = null;
       } else { setQrCode(data.qrCode ?? null); }
     }, 5000);
+  };
+
+  const handleGetPairingCode = async () => {
+    if (!pairingPhone.trim()) return;
+    setLoadingPairing(true);
+    setPairingError(null);
+    setPairingCode(null);
+    try {
+      const phone = pairingPhone.replace(/\D/g, "");
+      const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
+      const res = await fetch("/api/admin/whatsapp-qr", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber: fullPhone }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.pairingCode) {
+        setPairingError(data.error ?? "Código não retornado pela API.");
+      } else {
+        setPairingCode(data.pairingCode);
+        // Poll para detectar quando conectar
+        if (qrInterval.current) clearInterval(qrInterval.current);
+        qrInterval.current = setInterval(async () => {
+          const r = await fetch("/api/admin/whatsapp-qr");
+          const d = await r.json();
+          if (d.status === "connected") {
+            setConnStatus("connected");
+            setPairingCode(null);
+            clearInterval(qrInterval.current!);
+            qrInterval.current = null;
+          }
+        }, 5000);
+      }
+    } catch {
+      setPairingError("Falha de rede ao contatar a API.");
+    } finally {
+      setLoadingPairing(false);
+    }
   };
 
   /* ── Diagnóstico Meta ── */
@@ -544,6 +588,41 @@ export default function ConfiguracoesPage() {
                     ⚠️ Preencha e salve as credenciais da Evolution API acima antes de gerar o QR Code.
                   </p>
                 )}
+
+                {/* Pairing Code — alternativa ao QR */}
+                <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                  <p className="text-xs text-[var(--text-muted)] mb-2 font-medium">Conectar via código (sem QR)</p>
+                  <p className="text-xs text-[var(--text-muted)] mb-3 opacity-70">
+                    Digite seu número do WhatsApp Business e clique em obter código. No celular: WhatsApp → Dispositivos conectados → Vincular com número de telefone → insira o código.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Ex: 43988656471"
+                      value={pairingPhone}
+                      onChange={e => setPairingPhone(e.target.value.replace(/\D/g, ""))}
+                      maxLength={13}
+                      className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--gold)]"
+                    />
+                    <button
+                      onClick={handleGetPairingCode}
+                      disabled={loadingPairing || !pairingPhone.trim() || !evoBaseUrl || !evoApiKey}
+                      className="flex items-center gap-2 px-4 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors disabled:opacity-40 shrink-0"
+                    >
+                      {loadingPairing ? <RefreshCw size={14} className="animate-spin" /> : <span>Obter código</span>}
+                    </button>
+                  </div>
+                  {pairingError && (
+                    <p className="text-xs text-red-400 mt-2">{pairingError}</p>
+                  )}
+                  {pairingCode && (
+                    <div className="mt-3 p-4 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-xl text-center">
+                      <p className="text-xs text-[var(--text-muted)] mb-1">Digite este código no WhatsApp:</p>
+                      <p className="text-3xl font-mono font-bold tracking-widest text-[var(--gold)]">{pairingCode}</p>
+                      <p className="text-xs text-[var(--text-muted)] mt-2 animate-pulse">Aguardando conexão…</p>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 

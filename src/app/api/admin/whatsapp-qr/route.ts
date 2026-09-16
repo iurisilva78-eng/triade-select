@@ -161,6 +161,63 @@ export async function GET() {
 }
 
 /* ─────────────────────────────────────────────
+   PUT — retorna pairing code (alternativa ao QR)
+───────────────────────────────────────────── */
+export async function PUT(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any).role !== "ADMIN") {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
+
+  const cfg = await getWhatsAppConfig();
+  if (cfg.provider !== "evolution" || !cfg.evoBaseUrl || !cfg.evoApiKey) {
+    return NextResponse.json({ error: "Evolution API não configurada." }, { status: 400 });
+  }
+
+  const { phoneNumber } = await req.json().catch(() => ({}));
+  if (!phoneNumber) {
+    return NextResponse.json({ error: "Número de telefone obrigatório." }, { status: 400 });
+  }
+
+  const base = cfg.evoBaseUrl.replace(/\/$/, "");
+  const instance = cfg.evoInstance ?? "triade-select";
+  const headers = { apikey: cfg.evoApiKey, "Content-Type": "application/json" };
+
+  try {
+    const res = await fetch(`${base}/instance/pairingCode/${instance}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ phoneNumber }),
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    console.log("[whatsapp-pairing] response:", JSON.stringify(data).slice(0, 300));
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: `Erro ao obter código de pareamento (${res.status}): ${JSON.stringify(data).slice(0, 200)}` },
+        { status: 502 }
+      );
+    }
+
+    const pairingCode =
+      data?.pairingCode ??
+      data?.pairing_code ??
+      data?.code ??
+      null;
+
+    return NextResponse.json({ pairingCode });
+  } catch (err: any) {
+    const isTimeout = err?.name === "TimeoutError" || err?.code === "ABORT_ERR";
+    return NextResponse.json(
+      { error: isTimeout ? "Timeout ao obter código de pareamento." : `Erro: ${err?.message ?? "desconhecido"}` },
+      { status: 500 }
+    );
+  }
+}
+
+/* ─────────────────────────────────────────────
    POST — cria instância (chamado pelo botão
    "Gerar QR Code" antes do polling)
 ───────────────────────────────────────────── */
