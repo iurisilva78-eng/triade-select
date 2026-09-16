@@ -15,6 +15,7 @@ const schema = z.object({
     selectedSize: z.string().optional(),
     selectedClosure: z.string().optional(),
     hasCustomization: z.boolean().default(false),
+    unitPriceOverride: z.number().positive().optional(),
     notes: z.string().optional(),
   })).min(1),
   paymentMethod: z.string().optional(),
@@ -54,7 +55,8 @@ export async function POST(req: NextRequest) {
     let subtotal = 0;
     const itemsData = data.items.map((item) => {
       const product = products.find((p) => p.id === item.productId)!;
-      const unitPrice = item.hasCustomization ? product.priceWithCustom : product.priceBase;
+      const tablePrice = item.hasCustomization ? product.priceWithCustom : product.priceBase;
+      const unitPrice = item.unitPriceOverride ?? tablePrice;
       subtotal += unitPrice * item.quantity;
       return { ...item, unitPrice };
     });

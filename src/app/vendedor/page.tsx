@@ -19,6 +19,7 @@ interface ItemEntry {
   selectedSize: string;
   selectedClosure: string;
   hasCustomization: boolean;
+  unitPriceOverride: string;
   notes: string;
 }
 
@@ -170,6 +171,7 @@ export default function VendedorPage() {
     selectedSize: "",
     selectedClosure: "",
     hasCustomization: false,
+    unitPriceOverride: "",
     notes: "",
   }]);
   const [payMethod, setPayMethod] = useState("PIX");
@@ -193,6 +195,7 @@ export default function VendedorPage() {
     selectedSize: "",
     selectedClosure: "",
     hasCustomization: false,
+    unitPriceOverride: "",
     notes: "",
   }]);
 
@@ -204,14 +207,16 @@ export default function VendedorPage() {
 
   const getProduct = (id: string) => products.find((p) => p.id === id);
 
+  const getEffectivePrice = (item: ItemEntry) => {
+    if (item.unitPriceOverride) return parseFloat(item.unitPriceOverride.replace(",", ".")) || 0;
+    const p = getProduct(item.productId);
+    if (!p) return 0;
+    return item.hasCustomization ? p.priceWithCustom : p.priceBase;
+  };
+
   const computedTotal = () => {
     if (totalOverride) return parseFloat(totalOverride.replace(",", ".")) || 0;
-    return items.reduce((sum, item) => {
-      const p = getProduct(item.productId);
-      if (!p) return sum;
-      const price = item.hasCustomization ? p.priceWithCustom : p.priceBase;
-      return sum + price * item.quantity;
-    }, 0);
+    return items.reduce((sum, item) => sum + getEffectivePrice(item) * item.quantity, 0);
   };
 
   const handleSubmit = async () => {
@@ -233,6 +238,7 @@ export default function VendedorPage() {
         selectedSize: i.selectedSize || undefined,
         selectedClosure: i.selectedClosure || undefined,
         hasCustomization: i.hasCustomization,
+        unitPriceOverride: i.unitPriceOverride ? parseFloat(i.unitPriceOverride.replace(",", ".")) : undefined,
         notes: i.notes || undefined,
       })),
       paymentMethod: payMethod,
@@ -402,9 +408,15 @@ export default function VendedorPage() {
                     {/* Price */}
                     <div>
                       <label style={labelStyle}>Preço unit.</label>
-                      <p style={{ color: "#b89a4e", fontSize: 16, fontWeight: 700, margin: 0 }}>
-                        {formatBRL(item.hasCustomization ? product.priceWithCustom : product.priceBase)}
+                      <p style={{ color: item.unitPriceOverride ? "#4ade80" : "#b89a4e", fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>
+                        {formatBRL(getEffectivePrice(item))}
                       </p>
+                      {!item.unitPriceOverride && (
+                        <p style={{ color: "#444", fontSize: 10, margin: 0 }}>tabela</p>
+                      )}
+                      {item.unitPriceOverride && (
+                        <p style={{ color: "#4ade80", fontSize: 10, margin: 0 }}>especial ✓</p>
+                      )}
                     </div>
                   </div>
 
@@ -449,6 +461,31 @@ export default function VendedorPage() {
                       <span style={{ fontSize: 14, color: "#ccc" }}>Com personalização (logo)</span>
                     </label>
                   )}
+
+                  {/* Price override */}
+                  <div style={{ marginTop: 10 }}>
+                    <label style={labelStyle}>
+                      Preço especial (R$) — deixe em branco para usar tabela
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="text"
+                        placeholder={`Tabela: ${formatBRL(item.hasCustomization ? product.priceWithCustom : product.priceBase)}`}
+                        value={item.unitPriceOverride}
+                        onChange={(e) => updateItem(idx, { unitPriceOverride: e.target.value })}
+                        style={{ ...inputStyle, flex: 1, borderColor: item.unitPriceOverride ? "#4ade80" : "#222" }}
+                      />
+                      {item.unitPriceOverride && (
+                        <button
+                          onClick={() => updateItem(idx, { unitPriceOverride: "" })}
+                          style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0 }}
+                          title="Remover preço especial"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Notes */}
                   <input
