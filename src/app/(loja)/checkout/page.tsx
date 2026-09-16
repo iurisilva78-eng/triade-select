@@ -113,7 +113,7 @@ export default function CheckoutPage() {
         <p style={{ fontSize: 14, color: "var(--muted)", maxWidth: 360 }}>
           Faça login para finalizar seu pedido.
         </p>
-        <Link href="/login">
+        <Link href="/login?callbackUrl=/checkout">
           <button
             style={{
               padding: "16px 32px",

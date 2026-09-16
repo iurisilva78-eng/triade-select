@@ -15,6 +15,7 @@ const updateSchema = z.object({
     amount: z.number().positive(),
     method: z.string().min(1),
   }).optional(),
+  adjustTotal: z.number().positive().optional(),
   whatsappMessage: z.string().optional(),
   denyCancel: z.boolean().optional(),
   productionSteps: z.array(z.object({
@@ -94,6 +95,17 @@ export async function PATCH(
     }
 
     const updateData: any = {};
+
+    // Ajuste de valor total (admin)
+    if (data.adjustTotal) {
+      updateData.total = data.adjustTotal;
+      // Recalcula paymentStatus com o novo total
+      if (order.paidAmount >= data.adjustTotal) {
+        updateData.paymentStatus = "PAGO";
+      } else if (order.paidAmount > 0) {
+        updateData.paymentStatus = "PARCIAL";
+      }
+    }
 
     // Atualiza status
     if (data.status) {

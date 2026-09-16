@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function TriangleMark({ size = 22, color = "currentColor" }: { size?: number; color?: string }) {
@@ -16,6 +16,9 @@ function TriangleMark({ size = 22, color = "currentColor" }: { size?: number; co
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/produtos";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -37,7 +40,7 @@ export default function LoginPage() {
     if (result?.error) {
       setError("E-mail ou senha inválidos.");
     } else {
-      router.push("/produtos");
+      router.push(callbackUrl);
       router.refresh();
     }
   };
