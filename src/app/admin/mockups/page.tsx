@@ -48,6 +48,7 @@ const TABS = [
   { key: "capa", label: "Capa" },
   { key: "camiseta", label: "Camiseta" },
   { key: "camiseta-dupla", label: "Camiseta Dupla" },
+  { key: "polo", label: "Polo / Gola" },
 ];
 
 /* ── componente principal ── */

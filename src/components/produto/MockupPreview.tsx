@@ -25,10 +25,15 @@ export function MockupPreview({
   const config = configMap[mockupType] ?? DEFAULT_MOCKUP_CONFIG["capa"];
 
   // Imagem de fundo: usa a foto da cor específica se existir, senão o mockup genérico
+  // Busca insensível a maiúsculas/minúsculas para evitar erros de cadastro
   const colorKey = selectedColor ?? "";
-  const bgImage = (colorImages && colorKey && colorImages[colorKey])
+  const colorImageUrl = colorImages && colorKey
     ? colorImages[colorKey]
-    : config.image;
+      ?? colorImages[colorKey.toLowerCase()]
+      ?? colorImages[colorKey.charAt(0).toUpperCase() + colorKey.slice(1).toLowerCase()]
+      ?? Object.entries(colorImages).find(([k]) => k.toLowerCase() === colorKey.toLowerCase())?.[1]
+    : undefined;
+  const bgImage = colorImageUrl ?? config.image;
 
   return (
     <div className="relative w-full h-full">

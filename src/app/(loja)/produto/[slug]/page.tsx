@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Upload, X, CheckCircle, Eye, ChevronLeft, ChevronRight, Maximize2, ChevronDown } from "lucide-react";
 import { MockupPreview } from "@/components/produto/MockupPreview";
 import { MockupTypeConfig } from "@/lib/mockup-config";
+import { removeImageBackground } from "@/lib/remove-bg";
 import { SizeGuide } from "@/components/produto/SizeGuide";
 
 interface Product {
@@ -97,6 +98,7 @@ export default function ProdutoPage() {
   const [showLightbox, setShowLightbox]       = useState(false);
   const [mockupConfig, setMockupConfig]     = useState<Record<string, MockupTypeConfig> | undefined>(undefined);
   const [openAccordion, setOpenAccordion]   = useState<string | null>("descricao");
+  const [removingBg, setRemovingBg]         = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/mockup-config")
@@ -138,8 +140,24 @@ export default function ProdutoPage() {
     if (file.size > 10 * 1024 * 1024) { alert("Arquivo muito grande. Máximo 10 MB."); return; }
     setLogoFile(file);
     if (file.type !== "application/pdf") {
+      const isJpg = file.type === "image/jpeg" || file.type === "image/jpg";
       const reader = new FileReader();
-      reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target?.result as string;
+        if (isJpg) {
+          setRemovingBg(true);
+          try {
+            const cleanUrl = await removeImageBackground(dataUrl);
+            setLogoPreview(cleanUrl);
+          } catch {
+            setLogoPreview(dataUrl);
+          } finally {
+            setRemovingBg(false);
+          }
+        } else {
+          setLogoPreview(dataUrl);
+        }
+      };
       reader.readAsDataURL(file);
     } else {
       setLogoPreview(null);
@@ -615,12 +633,17 @@ export default function ProdutoPage() {
                 <p className="t-eyebrow mb-3">
                   Seu logotipo <span style={{ color: "#c0392b" }}>*</span>
                 </p>
-                {logoPreview ? (
+                {removingBg ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 14px", border: "1px solid var(--line-soft)", background: "var(--bg-2)", fontSize: 13, color: "var(--muted)" }}>
+                    <span style={{ fontSize: 18 }}>✂️</span>
+                    Removendo fundo automaticamente…
+                  </div>
+                ) : logoPreview ? (
                   <div style={{ position: "relative" }}>
                     <img
                       src={logoPreview}
                       alt="Preview"
-                      style={{ width: "100%", maxHeight: 160, objectFit: "contain", border: "1px solid var(--line-soft)", background: "var(--bg-2)" }}
+                      style={{ width: "100%", maxHeight: 160, objectFit: "contain", border: "1px solid var(--line-soft)", background: "repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 0 0 / 12px 12px" }}
                     />
                     <button
                       onClick={() => { setLogoFile(null); setLogoPreview(null); }}

@@ -26,4 +26,8 @@ export const DEFAULT_MOCKUP_CONFIG: Record<string, MockupTypeConfig> = {
       { top: "28%", left: "74%", size: "14%", label: "Costas" },
     ],
   },
+  polo: {
+    image: "/mockups/polo.png",
+    zones: [{ top: "33%", left: "58%", size: "12%", label: "Peito" }],
+  },
 };
