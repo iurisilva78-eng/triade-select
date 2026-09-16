@@ -85,7 +85,13 @@ export default function MockupsAdminPage() {
     fetch("/api/admin/mockup-config")
       .then((r) => r.json())
       .then((data) => {
-        if (data) setConfig(fromApi(data));
+        if (data && typeof data === "object") {
+          // Merge: defaults first, then saved config on top.
+          // This ensures new types (polo, gola-tconfort, etc.) always have zones
+          // even if they were added after the last DB save.
+          const merged = { ...DEFAULT_MOCKUP_CONFIG, ...data };
+          setConfig(fromApi(merged));
+        }
       })
       .finally(() => setLoading(false));
   }, []);
