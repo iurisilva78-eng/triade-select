@@ -163,7 +163,10 @@ export default function ConfiguracoesPage() {
       } else {
         setConnStatus("disconnected");
         setQrCode(data.qrCode ?? null);
-        if (!data.qrCode) setQrError("QR Code não retornado pela Evolution API. Verifique se a instância existe.");
+        if (!data.qrCode) {
+          const debugInfo = data._debug ? ` | Resposta bruta: ${JSON.stringify(data._debug).slice(0, 300)}` : "";
+          setQrError(`QR Code não retornado pela Evolution API.${debugInfo}`);
+        }
       }
     } catch (err: any) {
       setQrError("Falha de rede ao contatar a API. Verifique a URL da Evolution API.");

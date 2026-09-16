@@ -144,6 +144,14 @@ export async function GET() {
       qrData?.instance?.pairingCode ??
       null;
 
+    if (!qrCode) {
+      return NextResponse.json({
+        status: "disconnected",
+        qrCode: null,
+        _debug: qrData,
+      });
+    }
+
     return NextResponse.json({ status: "disconnected", qrCode });
 
   } catch (err: any) {
