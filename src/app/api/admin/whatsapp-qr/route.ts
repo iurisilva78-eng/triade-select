@@ -70,8 +70,7 @@ export async function GET() {
     );
 
     if (!existing) {
-      /* ── 2a. Cria a instância ── */
-      // Evolution API v2 sempre requer o campo integration
+      /* ── 2a. Tenta criar a instância ── */
       const createRes = await fetch(`${base}/instance/create`, {
         method: "POST",
         headers,
@@ -79,22 +78,19 @@ export async function GET() {
         signal: AbortSignal.timeout(15_000),
       });
 
-      if (!createRes.ok) {
+      if (createRes.ok) {
+        // Criou com sucesso — aguarda ficar pronta
+        await new Promise((r) => setTimeout(r, 2000));
+      } else {
         const d = await createRes.json().catch(() => ({}));
         const dText = JSON.stringify(d).toLowerCase();
-        // Ignora "já existe" (409, 403 "already in use", ou qualquer menção de "already")
-        if (createRes.status !== 409 && !dText.includes("already")) {
-          const rd = d;
-          return NextResponse.json(
-            { error: `Não foi possível criar a instância "${instance}". Resposta da API: ${JSON.stringify(rd).slice(0, 200)}` },
-            { status: 502 }
-          );
+        // Se for qualquer erro que não seja "já existe", loga mas continua tentando
+        // (a instância pode existir mas não ter sido listada no formato esperado)
+        if (!dText.includes("already") && createRes.status !== 409) {
+          console.warn("[whatsapp-qr] Criação falhou, tentando conectar mesmo assim:", dText);
         }
-        // Se já existe, continua para verificar estado de conexão
+        await new Promise((r) => setTimeout(r, 1000));
       }
-
-      // Aguarda instância ficar pronta
-      await new Promise((r) => setTimeout(r, 2000));
     }
 
     /* ── 3. Verifica estado de conexão ── */
