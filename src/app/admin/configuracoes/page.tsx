@@ -47,6 +47,10 @@ export default function ConfiguracoesPage() {
   const [verifyResult, setVerifyResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const qrInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /* ── Diagnóstico Meta ── */
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState<{ ok: boolean; data?: any; error?: string; hint?: string } | null>(null);
+
   /* ── Save / Test ── */
   const [savingApi, setSavingApi] = useState(false);
   const [savedApi, setSavedApi] = useState(false);
@@ -185,6 +189,19 @@ export default function ConfiguracoesPage() {
     }, 5000);
   };
 
+  /* ── Diagnóstico Meta ── */
+  const handleMetaDiag = async () => {
+    setDiagLoading(true); setDiagResult(null);
+    const res = await fetch("/api/admin/whatsapp-test");
+    const data = await res.json();
+    setDiagLoading(false);
+    if (res.ok) {
+      setDiagResult({ ok: true, data });
+    } else {
+      setDiagResult({ ok: false, error: data.error, hint: data.hint });
+    }
+  };
+
   /* ── Verificar credenciais ── */
   const handleVerifyCredentials = async () => {
     setVerifying(true);
@@ -306,25 +323,52 @@ export default function ConfiguracoesPage() {
         {/* Meta WhatsApp Cloud API fields */}
         {provider === "meta" && (
           <div className="space-y-4">
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-xs text-green-300">
-              <p className="font-semibold mb-1">✅ Meta WhatsApp Cloud API — 100% gratuita</p>
-              <ol className="list-decimal list-inside space-y-1 text-green-400">
-                <li>Acesse <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="underline">developers.facebook.com</a> → crie um app tipo "Business"</li>
-                <li>Adicione o produto <strong>WhatsApp</strong> ao app</li>
-                <li>Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e o <strong>Token de acesso temporário</strong></li>
-                <li>Para token permanente: crie um <strong>System User</strong> no Meta Business Suite com permissão WhatsApp</li>
-                <li>Cole os dados abaixo e salve</li>
-              </ol>
+
+            {/* Guia: número de teste vs número real */}
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-xs text-green-300 space-y-3">
+              <p className="font-bold text-green-200 text-sm">✅ Meta WhatsApp Cloud API — 100% gratuita</p>
+
+              <div>
+                <p className="font-semibold text-green-200 mb-1">📋 Configuração inicial (número de teste):</p>
+                <ol className="list-decimal list-inside space-y-1 text-green-400">
+                  <li>Acesse <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="underline">developers.facebook.com</a> → crie app tipo "Business"</li>
+                  <li>Adicione o produto <strong>WhatsApp</strong> → <strong>Configuração da API</strong></li>
+                  <li>Copie o <strong>Phone Number ID</strong> e o <strong>Token de acesso temporário</strong></li>
+                  <li>Cole abaixo e salve — funciona imediatamente com o número de teste</li>
+                </ol>
+              </div>
+
+              <div className="border-t border-green-500/20 pt-3">
+                <p className="font-semibold text-amber-300 mb-1">📱 Para usar seu número real (chip próprio):</p>
+                <ol className="list-decimal list-inside space-y-1 text-amber-400/80">
+                  <li><strong className="text-amber-300">O número NÃO pode estar ativo no WhatsApp pessoal.</strong><br />
+                    Se estiver, você deve excluir a conta WhatsApp nesse chip ou usar um chip dedicado.</li>
+                  <li>Em <a href="https://business.facebook.com" target="_blank" rel="noreferrer" className="underline text-amber-300">business.facebook.com</a> → crie ou selecione uma <strong>Conta WhatsApp Business</strong></li>
+                  <li>No app Meta for Developers → WhatsApp → <strong>Gerenciar números</strong> → "Adicionar número de telefone"</li>
+                  <li>Informe o nome da empresa e o número, depois <strong>verifique via SMS ou ligação</strong></li>
+                  <li>Após verificação, o novo <strong>Phone Number ID</strong> aparece na lista — copie e salve abaixo</li>
+                  <li>Para token permanente: <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noreferrer" className="underline text-amber-300">Meta Business Suite → System Users</a> → crie usuário com permissão <code>whatsapp_business_messaging</code> → gere token</li>
+                </ol>
+              </div>
+
+              <div className="border-t border-green-500/20 pt-3">
+                <p className="font-semibold text-red-300 mb-1">⚠️ O token temporário expira em 24h</p>
+                <p className="text-red-400/80">Sempre use um token de System User permanente em produção. O token temporário da tela de Configuração da API é apenas para testes.</p>
+              </div>
             </div>
+
             <div>
               <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Phone Number ID</label>
               <input
                 type="text"
                 placeholder="Ex: 123456789012345"
                 value={metaPhoneId}
-                onChange={e => setMetaPhoneId(e.target.value)}
+                onChange={e => { setMetaPhoneId(e.target.value); setDiagResult(null); }}
                 className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-[var(--gold)]"
               />
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Encontrado em: Meta for Developers → WhatsApp → Configuração da API → "ID do número de telefone"
+              </p>
             </div>
             <div>
               <label className="text-xs text-[var(--text-muted)] font-medium block mb-1.5">Access Token</label>
@@ -333,7 +377,7 @@ export default function ConfiguracoesPage() {
                   type={showMetaToken ? "text" : "password"}
                   placeholder="EAAxxxxxxxxxxxxx..."
                   value={metaToken}
-                  onChange={e => setMetaToken(e.target.value)}
+                  onChange={e => { setMetaToken(e.target.value); setDiagResult(null); }}
                   className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-[var(--gold)] pr-12"
                 />
                 <button onClick={() => setShowMetaToken(!showMetaToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)]">
@@ -341,6 +385,39 @@ export default function ConfiguracoesPage() {
                 </button>
               </div>
             </div>
+
+            {/* Diagnóstico do número */}
+            {metaPhoneId && metaToken && (
+              <div>
+                <button
+                  onClick={handleMetaDiag}
+                  disabled={diagLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors"
+                >
+                  {diagLoading ? <RefreshCw size={14} className="animate-spin" /> : <Wifi size={14} />}
+                  Diagnosticar número no Meta
+                </button>
+                {diagResult && (
+                  <div className={`mt-3 rounded-xl border p-3 text-xs ${diagResult.ok ? "bg-green-500/10 border-green-500/30 text-green-300" : "bg-red-500/10 border-red-500/30 text-red-300"}`}>
+                    {diagResult.ok ? (
+                      <div className="space-y-1">
+                        <p className="font-bold text-green-200">✅ Número verificado no Meta!</p>
+                        <p>📱 <strong>Número:</strong> {diagResult.data.displayPhone}</p>
+                        <p>🏷️ <strong>Nome verificado:</strong> {diagResult.data.verifiedName}</p>
+                        <p>⭐ <strong>Qualidade:</strong> {diagResult.data.qualityRating}</p>
+                        <p>🔄 <strong>Status:</strong> {diagResult.data.status}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="font-bold text-red-200">❌ Erro no número</p>
+                        <p className="text-red-400 whitespace-pre-wrap">{diagResult.error}</p>
+                        {diagResult.hint && <p className="text-amber-300 mt-1">{diagResult.hint}</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
