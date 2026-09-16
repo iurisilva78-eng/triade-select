@@ -34,9 +34,12 @@ interface Category {
 }
 
 const MOCKUP_OPTIONS = [
-  { value: "capa",           label: "🧣 Capa de barbearia" },
-  { value: "camiseta",       label: "👕 Camiseta — logo no peito" },
-  { value: "camiseta-dupla", label: "👕 Camiseta — logo no peito + costas" },
+  { value: "capa",                label: "🧣 Capa de barbearia" },
+  { value: "camiseta",            label: "👕 Camiseta — logo no peito" },
+  { value: "camiseta-dupla",      label: "👕 Camiseta — logo no peito + costas" },
+  { value: "polo",                label: "👔 Polo / Gola — logo no peito" },
+  { value: "gola-tconfort",       label: "🪡 Gola T-Confort Lisa" },
+  { value: "gola-tconfort-risca", label: "🪡 Gola T-Confort Risca de Giz" },
 ];
 
 const emptyForm = {
@@ -378,7 +381,7 @@ export default function AdminProdutosPage() {
               {/* ── Tipo de mockup ── */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-[var(--text)]">Tipo de mockup (prévia personalizada)</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {MOCKUP_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
