@@ -265,7 +265,7 @@ export default function VendedorPage() {
   const resetForm = () => {
     setCustomerName("");
     setCustomerPhone("");
-    setItems([{ productId: "", quantity: 1, selectedColor: "", selectedSize: "", selectedClosure: "", hasCustomization: false, notes: "" }]);
+    setItems([{ productId: "", quantity: 1, selectedColor: "", selectedSize: "", selectedClosure: "", hasCustomization: false, unitPriceOverride: "", notes: "" }]);
     setPayMethod("PIX");
     setPaidAmount("");
     setTotalOverride("");
