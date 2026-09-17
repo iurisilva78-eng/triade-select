@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
-import { LayoutDashboard, Package, ShoppingBag, Users, Factory, Settings, PenSquare, Layers, Tag, Server } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Users, Factory, Settings, PenSquare, Layers, Tag, Server, ImageIcon } from "lucide-react";
 import { LogoImg } from "@/components/ui/logo-img";
 
 const navItems = [
@@ -12,8 +12,9 @@ const navItems = [
   { href: "/admin/produtos", label: "Produtos", icon: Package },
   { href: "/admin/cupons",   label: "Cupons",   icon: Tag },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
-  { href: "/admin/conteudo", label: "Conteúdo", icon: PenSquare },
-  { href: "/admin/mockups", label: "Mockups", icon: Layers },
+  { href: "/admin/conteudo",   label: "Conteúdo",   icon: PenSquare },
+  { href: "/admin/comunidade", label: "Comunidade", icon: ImageIcon },
+  { href: "/admin/mockups",    label: "Mockups",    icon: Layers },
   { href: "/admin/configuracoes",    label: "Configurações",  icon: Settings },
   { href: "/admin/infraestrutura",   label: "Infraestrutura", icon: Server },
 ];
