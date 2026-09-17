@@ -169,7 +169,17 @@ export async function PATCH(
         if (data.status === "ENVIADO" && data.trackingCode) {
           notifyShipped(phone, name, orderNumber, data.trackingCode).catch(console.error);
         } else if (data.status === "ENTREGUE") {
-          notifyDelivered(phone, name, orderNumber).catch(console.error);
+          const cashbackCode = `CASHBACK30-${orderNumber}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+          prisma.coupon.create({
+            data: {
+              code: cashbackCode,
+              description: `Cashback pedido #${orderNumber}`,
+              type: "fixed",
+              value: 30,
+              active: true,
+            },
+          }).catch(console.error);
+          notifyDelivered(phone, name, orderNumber, cashbackCode).catch(console.error);
         } else {
           notifyStatusUpdate(phone, name, orderNumber, data.status as OrderStatus).catch(console.error);
         }

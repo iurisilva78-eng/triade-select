@@ -252,16 +252,21 @@ export async function sendWhatsAppGroupMessage(groupId: string, message: string)
 ───────────────────────────────────────────────── */
 function buildMessage(
   type: "new_order" | "status_update" | "shipped" | "delivered",
-  data: { customerName: string; orderNumber: string; status?: OrderStatus; trackingCode?: string; total?: number; minimumPayment?: number }
+  data: { customerName: string; orderNumber: string; status?: OrderStatus; trackingCode?: string; total?: number; minimumPayment?: number; cashbackCode?: string }
 ): string {
-  const { customerName, orderNumber, status, trackingCode, total, minimumPayment } = data;
+  const { customerName, orderNumber, status, trackingCode, total, minimumPayment, cashbackCode } = data;
 
   if (type === "new_order") return (
     `Olá, *${customerName}*! 👋\n\n` +
     `Seu pedido *#${orderNumber}* foi recebido! 📋\n\n` +
-    `💰 *Total:* ${formatCurrency(total!)}\n` +
-    `💳 *Mínimo para produção (50%):* ${formatCurrency(minimumPayment!)}\n\n` +
-    `Assim que confirmarmos o pagamento, sua produção começa!\nPrazo: *~15 dias úteis*.\n\n` +
+    `💰 *Total do pedido:* ${formatCurrency(total!)}\n` +
+    `⚠️ *Valor mínimo para iniciar a produção (50%):* ${formatCurrency(minimumPayment!)}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `💳 *PAGAMENTO VIA PIX*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🔑 *Chave CNPJ:* 61.514.043/0001-80\n\n` +
+    `✅ *Após realizar o pagamento, envie o comprovante aqui nesta conversa para validarmos e iniciarmos sua produção.*\n\n` +
+    `Prazo de produção: *~15 dias úteis* após confirmação.\n\n` +
     `— *Triade Select*`
   );
 
@@ -282,10 +287,12 @@ function buildMessage(
     `Olá, *${customerName}*! 🎉\n\n` +
     `Seu pedido *#${orderNumber}* foi entregue! Parabéns pela compra!\n\n` +
     `Esperamos que você esteja amando o produto ❤️\n\n` +
-    `🎥 *Missão especial para você:*\n` +
-    `Poste um vídeo de 30 segundos no Instagram usando o produto e marque *@triadeselect*.\n\n` +
-    `🏷️ *Você ganha 50% de desconto* na próxima unidade!\n` +
-    `_Ex: 2 capas de R$79,90 → você paga R$79,90 + R$39,95_\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🎁 *CASHBACK DE R$ 30,00*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `Como agradecimento pela sua compra, você ganhou um voucher de *R$ 30,00* para usar no seu próximo pedido!\n\n` +
+    `🏷️ *Cupom:* \`${cashbackCode ?? "CASHBACK30"}\`\n` +
+    `_Válido para qualquer produto · sem pedido mínimo_\n\n` +
     `Obrigado pela confiança! 🙏\n— *Triade Select*`
   );
 
@@ -301,6 +308,6 @@ export async function notifyStatusUpdate(phone: string, customerName: string, or
 export async function notifyShipped(phone: string, customerName: string, orderNumber: string, trackingCode: string) {
   return sendWhatsAppMessage(phone, buildMessage("shipped", { customerName, orderNumber, trackingCode }));
 }
-export async function notifyDelivered(phone: string, customerName: string, orderNumber: string) {
-  return sendWhatsAppMessage(phone, buildMessage("delivered", { customerName, orderNumber }));
+export async function notifyDelivered(phone: string, customerName: string, orderNumber: string, cashbackCode?: string) {
+  return sendWhatsAppMessage(phone, buildMessage("delivered", { customerName, orderNumber, cashbackCode }));
 }

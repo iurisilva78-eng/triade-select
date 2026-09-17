@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { generateOrderNumber, formatCurrency } from "@/lib/utils";
-import { notifyOrderCreated, sendWhatsAppGroupMessage, sendWhatsAppImageMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { notifyOrderCreated, sendWhatsAppMessage } from "@/lib/whatsapp";
 
 const orderSchema = z.object({
   items: z.array(
@@ -153,28 +153,7 @@ export async function POST(req: NextRequest) {
       `Acesse o painel admin para gerenciar.\n` +
       `— *Triade Select*`;
 
-    // 1. Notifica grupo WhatsApp específico (se configurado)
-    const groupConfig = await prisma.siteConfig.findUnique({ where: { key: "whatsapp_group_id" } });
-    const groupId = groupConfig?.value?.trim() || process.env.WHATSAPP_GROUP_ID;
-
-    if (groupId) {
-      sendWhatsAppGroupMessage(groupId, adminMsg).catch(console.error);
-
-      // Envia preview da logo como imagem no grupo
-      if (hasLogo) {
-        for (const item of order.items as any[]) {
-          if (item.hasCustomization && item.logoUrl) {
-            const logoCaption =
-              `📎 *Logo do pedido #${orderNumber}*\n` +
-              `Produto: ${item.product.name}\n` +
-              `Cliente: ${dbUser?.name ?? "—"}`;
-            sendWhatsAppImageMessage(groupId, item.logoUrl, logoCaption, { raw: true }).catch(console.error);
-          }
-        }
-      }
-    }
-
-    // 2. Notifica telefones individuais admin cadastrados
+    // Notifica telefones individuais admin cadastrados (grupo: somente após alinhamento manual)
     const adminPhones = await prisma.notificationPhone.findMany({ where: { active: true } });
     for (const ap of adminPhones) {
       sendWhatsAppMessage(ap.phone, adminMsg).catch(console.error);

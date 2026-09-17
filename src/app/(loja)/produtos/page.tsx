@@ -21,8 +21,9 @@ const getColorCss = (name: string) => COLOR_MAP[name.toLowerCase()] ?? "#ccc";
 export default async function ProdutosPage({
   searchParams,
 }: {
-  searchParams: { category?: string; search?: string };
+  searchParams: Promise<{ category?: string; search?: string }>;
 }) {
+  const { category, search } = await searchParams;
   const [categories, products] = await Promise.all([
     prisma.category.findMany({
       include: { _count: { select: { products: { where: { active: true } } } } },
@@ -31,10 +32,8 @@ export default async function ProdutosPage({
     prisma.product.findMany({
       where: {
         active: true,
-        ...(searchParams.category ? { category: { slug: searchParams.category } } : {}),
-        ...(searchParams.search
-          ? { name: { contains: searchParams.search, mode: "insensitive" } }
-          : {}),
+        ...(category ? { category: { slug: category } } : {}),
+        ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
       },
       include: {
         category: true,
@@ -98,9 +97,9 @@ export default async function ProdutosPage({
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 padding: "8px 16px",
-                border: `1px solid ${!searchParams.category ? "var(--ink)" : "var(--line-soft)"}`,
-                background: !searchParams.category ? "var(--ink)" : "transparent",
-                color: !searchParams.category ? "var(--bg)" : "var(--muted)",
+                border: `1px solid ${!category ? "var(--ink)" : "var(--line-soft)"}`,
+                background: !category ? "var(--ink)" : "transparent",
+                color: !category ? "var(--bg)" : "var(--muted)",
                 borderRadius: "var(--r-sm)",
                 whiteSpace: "nowrap",
                 textDecoration: "none",
@@ -119,9 +118,9 @@ export default async function ProdutosPage({
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
                   padding: "8px 16px",
-                  border: `1px solid ${searchParams.category === cat.slug ? "var(--ink)" : "var(--line-soft)"}`,
-                  background: searchParams.category === cat.slug ? "var(--ink)" : "transparent",
-                  color: searchParams.category === cat.slug ? "var(--bg)" : "var(--muted)",
+                  border: `1px solid ${category === cat.slug ? "var(--ink)" : "var(--line-soft)"}`,
+                  background: category === cat.slug ? "var(--ink)" : "transparent",
+                  color: category === cat.slug ? "var(--bg)" : "var(--muted)",
                   borderRadius: "var(--r-sm)",
                   whiteSpace: "nowrap",
                   textDecoration: "none",
