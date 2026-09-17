@@ -64,7 +64,12 @@ function TriangleMark({ size = 28, color = "currentColor" }: { size?: number; co
 }
 
 export default async function HomePage() {
-  const [cfg, products, categories] = await Promise.all([getSiteConfig(), getFeaturedProducts(), getCategories()]);
+  const [cfg, products, categories, barbers] = await Promise.all([
+    getSiteConfig(),
+    getFeaturedProducts(),
+    getCategories(),
+    prisma.barberSpotlight.findMany({ where: { active: true }, orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }] }),
+  ]);
 
   const features = [1, 2, 3, 4].map((n) => ({
     n: `0${n}`,
@@ -348,7 +353,7 @@ export default async function HomePage() {
       )}
 
       {/* ── C2: UGC — Barbeiros que vestem Triade ─────────── */}
-      <section
+      {barbers.length > 0 && <section
         className="py-16 md:py-24 px-5 md:px-8 grain"
         style={{ background: "var(--ink)", borderBottom: "1px solid rgba(246,242,236,0.08)" }}
       >
@@ -361,54 +366,61 @@ export default async function HomePage() {
             </h2>
           </div>
 
-          {/* Placeholder cards — will be replaced with real content */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {[
-              { initials: "MB", name: "Marcel Barbeiro", city: "São Paulo, SP" },
-              { initials: "RB", name: "Rodrigo Borges", city: "Rio de Janeiro, RJ" },
-              { initials: "TL", name: "Thiago Lima", city: "Belo Horizonte, MG" },
-              { initials: "AC", name: "André Costa", city: "Curitiba, PR" },
-            ].map(({ initials, name, city }) => (
+            {barbers.map((b) => {
+              const initials = b.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("");
+              return (
               <div
-                key={name}
+                key={b.id}
                 className="mockup-bg"
                 style={{
                   aspectRatio: "3/4",
-                  background: "rgba(246,242,236,0.05)",
+                  background: b.imageUrl ? "transparent" : "rgba(246,242,236,0.05)",
                   border: "1px solid rgba(246,242,236,0.08)",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "flex-end",
-                  padding: 16,
                   position: "relative",
                   overflow: "hidden",
                 }}
               >
-                {/* Avatar placeholder */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -60%)",
-                    width: 56,
-                    height: 56,
-                    borderRadius: "50%",
-                    background: "rgba(168,130,58,0.2)",
-                    border: "1px solid var(--gold)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontFamily: "var(--font-display)",
-                    fontSize: 20,
-                    color: "var(--gold)",
-                    opacity: 0.7,
-                  }}
-                >
-                  {initials}
-                </div>
+                {b.imageUrl ? (
+                  <img
+                    src={b.imageUrl}
+                    alt={b.name}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -60%)",
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      background: "rgba(168,130,58,0.2)",
+                      border: "1px solid var(--gold)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: "var(--font-display)",
+                      fontSize: 20,
+                      color: "var(--gold)",
+                      opacity: 0.7,
+                    }}
+                  >
+                    {initials}
+                  </div>
+                )}
 
-                <div>
+                {/* Gradient overlay over photo */}
+                {b.imageUrl && (
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 55%)" }} />
+                )}
+
+                <div style={{ position: "relative", zIndex: 2, padding: 16 }}>
                   <div
                     style={{
                       fontFamily: "var(--font-display)",
@@ -417,14 +429,20 @@ export default async function HomePage() {
                       marginBottom: 2,
                     }}
                   >
-                    {name}
+                    {b.name}
                   </div>
                   <div className="t-eyebrow" style={{ fontSize: 8, color: "rgba(246,242,236,0.45)" }}>
-                    {city}
+                    {b.city}
                   </div>
+                  {b.instagramHandle && (
+                    <div style={{ fontSize: 8, color: "var(--gold)", marginTop: 3, opacity: 0.8 }}>
+                      @{b.instagramHandle.replace(/^@/, "")}
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="text-center mt-8">
@@ -436,7 +454,7 @@ export default async function HomePage() {
             </p>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* ── Banner B2B ─────────────────────────────────────── */}
       <section className="px-5 md:px-8 py-6 md:py-8" style={{ borderBottom: "1px solid var(--line-soft)" }}>

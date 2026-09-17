@@ -267,3 +267,18 @@ model NotificationPhone {
 
   @@map("notification_phones")
 }
+
+model BarberSpotlight {
+  id              String   @id @default(cuid())
+  name            String
+  city            String
+  instagramHandle String?
+  imageUrl        String?
+  videoUrl        String?
+  active          Boolean  @default(true)
+  displayOrder    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("barber_spotlights")
+}
