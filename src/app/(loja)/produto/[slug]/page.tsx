@@ -257,12 +257,13 @@ export default function ProdutoPage() {
           className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-0 md:gap-20"
         >
 
-          {/* ── Galeria (primeira no DOM = topo no mobile, esquerda no desktop) ── */}
+          {/* ── Galeria ── */}
           <div>
-            {/* Thumbnails + imagem principal */}
-            <div className="grid grid-cols-1 sm:grid-cols-[80px_1fr] gap-4">
-              {/* Thumbnails (escondidas no mobile) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }} className="max-sm:hidden">
+            {/* Grid desktop: thumbnails esquerda + imagem direita */}
+            <div className="grid sm:grid-cols-[72px_1fr] gap-3">
+
+              {/* Thumbnails verticais — desktop apenas */}
+              <div className="hidden sm:flex flex-col gap-2">
                 {product.images.map((src, i) => (
                   <button
                     key={i}
@@ -352,24 +353,30 @@ export default function ProdutoPage() {
               </div>
             </div>
 
-            {/* Dots (mobile) */}
+            {/* Faixa de miniaturas clicáveis — mobile apenas */}
             {!colorImg && product.images.length > 1 && (
-              <div className="flex gap-1.5 justify-center sm:hidden" style={{ marginTop: 10 }}>
-                {product.images.map((_, idx) => (
+              <div
+                className="flex sm:hidden gap-2 overflow-x-auto"
+                style={{ marginTop: 8, paddingBottom: 4, scrollbarWidth: "none" }}
+              >
+                {product.images.map((src, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIdx(idx)}
+                    className="mockup-bg"
                     style={{
-                      width: idx === currentImageIdx ? 16 : 6,
-                      height: 6,
-                      borderRadius: 3,
-                      background: idx === currentImageIdx ? "var(--gold)" : "var(--line-soft)",
-                      border: 0,
-                      cursor: "pointer",
+                      width: 56,
+                      height: 56,
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      border: idx === currentImageIdx ? "2px solid var(--ink)" : "1px solid var(--line-soft)",
                       padding: 0,
-                      transition: "width 0.2s, background 0.2s",
+                      cursor: "pointer",
+                      borderRadius: "var(--r-xs)",
                     }}
-                  />
+                  >
+                    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply" }} />
+                  </button>
                 ))}
               </div>
             )}
