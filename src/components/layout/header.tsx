@@ -7,16 +7,6 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 
-/* ── Triângulo duplo da marca ──────────────────────────── */
-function TriangleMark({ size = 26, color = "currentColor" }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
-      <polygon points="50,8 90,80 10,80" stroke={color} strokeWidth="5" fill="none" strokeLinejoin="round" />
-      <polygon points="50,28 78,75 22,75" stroke={color} strokeWidth="4" fill="none" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,7 +32,7 @@ export function Header() {
 
         {/* Wordmark */}
         <Link href="/" className="flex items-center gap-2.5">
-          <TriangleMark size={26} color="var(--gold)" />
+          <img src="/logo.png" alt="" aria-hidden style={{ width: 26, height: 26, objectFit: "contain" }} />
           <span style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 17, letterSpacing: "0.02em", lineHeight: 1 }}>
             TRIADE <span style={{ fontStyle: "italic", fontWeight: 300, color: "var(--gold)" }}>select</span>
           </span>
