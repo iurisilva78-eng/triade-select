@@ -73,6 +73,7 @@ export const metadata: Metadata = {
   description:
     "Capas, uniformes e aventais personalizados para barbearias profissionais. Qualidade premium, entrega em todo o Brasil.",
   keywords: "capa barbearia, uniforme barbearia, avental barbearia, personalizado",
+  icons: { icon: "/logo.png", apple: "/logo.png" },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
