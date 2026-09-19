@@ -11,7 +11,7 @@ export default async function Image() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#1A1714",
+          background: "#F6F2EC",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -26,7 +26,7 @@ export default async function Image() {
             position: "absolute",
             inset: 0,
             background:
-              "radial-gradient(ellipse at 50% 0%, rgba(201,151,58,0.12) 0%, transparent 60%)",
+              "radial-gradient(ellipse at 50% 0%, rgba(201,151,58,0.10) 0%, transparent 60%)",
           }}
         />
 
@@ -68,7 +68,7 @@ export default async function Image() {
         {/* Brand name */}
         <div
           style={{
-            color: "#F0EBE2",
+            color: "#1A1714",
             fontSize: 56,
             fontWeight: 400,
             letterSpacing: "0.12em",
@@ -109,7 +109,7 @@ export default async function Image() {
           style={{
             position: "absolute",
             bottom: 28,
-            color: "rgba(240,235,226,0.3)",
+            color: "rgba(26,23,20,0.3)",
             fontSize: 14,
             letterSpacing: "0.1em",
             fontFamily: "sans-serif",
