@@ -1,12 +1,50 @@
 /**
- * Remove o fundo de uma imagem usando flood-fill pelos cantos via canvas.
- * Funciona bem para logos com fundo branco ou de cor sólida.
- * Retorna um PNG com fundo transparente.
+ * Remove o fundo de uma imagem de logo.
+ * Tenta primeiro a API remove.bg (server-side, alta qualidade).
+ * Cai de volta no algoritmo de flood-fill via canvas se a API não estiver disponível.
  */
-export async function removeImageBackground(
-  dataUrl: string,
-  tolerance = 35
-): Promise<string> {
+export async function removeImageBackground(dataUrl: string): Promise<string> {
+  // Tenta API remove.bg via servidor
+  try {
+    const blob   = dataUrlToBlob(dataUrl);
+    const fd     = new FormData();
+    fd.append("image", blob, "logo.png");
+
+    const res = await fetch("/api/remove-bg", { method: "POST", body: fd });
+    if (res.ok) {
+      const buffer = await res.arrayBuffer();
+      return bufferToDataUrl(buffer, "image/png");
+    }
+    // 503 = sem chave configurada, silenciosamente usa fallback
+    if (res.status !== 503) {
+      console.warn("[remove-bg] API retornou", res.status, "— usando fallback canvas");
+    }
+  } catch (err) {
+    console.warn("[remove-bg] Erro na API, usando fallback canvas:", err);
+  }
+
+  return canvasFloodFill(dataUrl);
+}
+
+// ─── helpers ──────────────────────────────────────────────────
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, b64] = dataUrl.split(",");
+  const mime        = meta.match(/:(.*?);/)?.[1] ?? "image/png";
+  const bytes       = atob(b64);
+  const arr         = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+function bufferToDataUrl(buffer: ArrayBuffer, mime: string): string {
+  const bytes  = new Uint8Array(buffer);
+  let binary   = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return `data:${mime};base64,${btoa(binary)}`;
+}
+
+function canvasFloodFill(dataUrl: string, tolerance = 35): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
 
@@ -15,16 +53,16 @@ export async function removeImageBackground(
         const canvas = document.createElement("canvas");
         const w = img.width;
         const h = img.height;
-        canvas.width = w;
+        canvas.width  = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0);
 
         const imageData = ctx.getImageData(0, 0, w, h);
-        const data = imageData.data;
+        const data      = imageData.data;
 
-        // Amostra cor de fundo nos cantos + bordas (mais robusto que só 4 cantos)
-        const samples = [
+        // Amostra fundo em vários pontos das bordas
+        const samples: [number, number][] = [
           [0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1],
           [Math.floor(w / 4), 0], [Math.floor(w * 3 / 4), 0],
           [Math.floor(w / 4), h - 1], [Math.floor(w * 3 / 4), h - 1],
@@ -35,58 +73,39 @@ export async function removeImageBackground(
         let bgR = 0, bgG = 0, bgB = 0;
         for (const [x, y] of samples) {
           const i = (y * w + x) * 4;
-          bgR += data[i];
-          bgG += data[i + 1];
-          bgB += data[i + 2];
+          bgR += data[i]; bgG += data[i + 1]; bgB += data[i + 2];
         }
         bgR = Math.round(bgR / samples.length);
         bgG = Math.round(bgG / samples.length);
         bgB = Math.round(bgB / samples.length);
 
-        // Distância de cor em relação ao fundo amostrado
         const colorDiff = (idx: number) => {
-          const r = data[idx] - bgR;
-          const g = data[idx + 1] - bgG;
-          const b = data[idx + 2] - bgB;
+          const r = data[idx] - bgR, g = data[idx + 1] - bgG, b = data[idx + 2] - bgB;
           return Math.sqrt(r * r + g * g + b * b);
         };
 
-        // BFS flood-fill partindo dos 4 cantos
         const visited = new Uint8Array(w * h);
         const queue: number[] = [];
 
-        const seedPoints = [0, w - 1, w * (h - 1), w * h - 1];
-        for (const p of seedPoints) {
+        for (const p of [0, w - 1, w * (h - 1), w * h - 1]) {
           if (!visited[p] && colorDiff(p * 4) <= tolerance) {
-            visited[p] = 1;
-            queue.push(p);
+            visited[p] = 1; queue.push(p);
           }
         }
 
         let qi = 0;
         while (qi < queue.length) {
           const p = queue[qi++];
-          data[p * 4 + 3] = 0; // transparente
-
-          const x = p % w;
-          const y = Math.floor(p / w);
-
-          if (x > 0 && !visited[p - 1] && colorDiff((p - 1) * 4) <= tolerance) {
-            visited[p - 1] = 1;
-            queue.push(p - 1);
+          data[p * 4 + 3] = 0;
+          const x = p % w, y = Math.floor(p / w);
+          for (const n of [p - 1, p + 1, p - w, p + w]) {
+            const nx = n % w, ny = Math.floor(n / w);
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+            if (!visited[n] && colorDiff(n * 4) <= tolerance) {
+              visited[n] = 1; queue.push(n);
+            }
           }
-          if (x < w - 1 && !visited[p + 1] && colorDiff((p + 1) * 4) <= tolerance) {
-            visited[p + 1] = 1;
-            queue.push(p + 1);
-          }
-          if (y > 0 && !visited[p - w] && colorDiff((p - w) * 4) <= tolerance) {
-            visited[p - w] = 1;
-            queue.push(p - w);
-          }
-          if (y < h - 1 && !visited[p + w] && colorDiff((p + w) * 4) <= tolerance) {
-            visited[p + w] = 1;
-            queue.push(p + w);
-          }
+          void x; void y;
         }
 
         ctx.putImageData(imageData, 0, 0);

@@ -59,6 +59,7 @@ export default function InfraestruturaPage() {
     NEXTAUTH_SECRET:      !!process.env.NEXTAUTH_SECRET,
     NEXTAUTH_URL:         !!process.env.NEXTAUTH_URL,
     IMGBB_API_KEY:        !!process.env.IMGBB_API_KEY,
+    REMOVEBG_API_KEY:     !!process.env.REMOVEBG_API_KEY,
     MELHOR_ENVIO_TOKEN:   !!process.env.MELHOR_ENVIO_TOKEN,
     WHATSAPP_PROVIDER:    !!process.env.WHATSAPP_PROVIDER,
     WHATSAPP_API_URL:     !!process.env.WHATSAPP_API_URL,
@@ -200,6 +201,7 @@ export default function InfraestruturaPage() {
         {/* Upload */}
         <Card title="Upload de Imagens — ImgBB" icon={Zap}>
           <StatusBadge ok={!!uploadOk} label={uploadOk ? "IMGBB_API_KEY configurada — produção" : "Sem IMGBB_API_KEY — salvando em disco (desenvolvimento)"} />
+          <StatusBadge ok={env.REMOVEBG_API_KEY} label={env.REMOVEBG_API_KEY ? "REMOVEBG_API_KEY configurada — remoção de fundo com IA" : "Sem REMOVEBG_API_KEY — usando algoritmo básico (menos preciso)"} />
           {!uploadOk && (
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-400 leading-relaxed">
               Configure <code className="font-mono">IMGBB_API_KEY</code> no Vercel para que uploads de imagens funcionem em produção.
