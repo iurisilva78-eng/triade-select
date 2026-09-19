@@ -73,7 +73,29 @@ export const metadata: Metadata = {
   description:
     "Capas, uniformes e aventais personalizados para barbearias profissionais. Qualidade premium, entrega em todo o Brasil.",
   keywords: "capa barbearia, uniforme barbearia, avental barbearia, personalizado",
-  icons: { icon: "/logo.png", apple: "/logo.png" },
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/logo.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: "/logo.png",
+  },
+  openGraph: {
+    title: "Triade Select — Uniformes para Barbearias",
+    description: "Capas, uniformes e aventais personalizados para barbearias profissionais. Qualidade premium, entrega em todo o Brasil.",
+    url: "https://triadeselect.com.br",
+    siteName: "Triade Select",
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Triade Select — Uniformes para Barbearias",
+    description: "Capas, uniformes e aventais para barbearias profissionais.",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -112,6 +134,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="pt-BR" className={fontClasses} data-theme={theme}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: cssOverride }} />
+        <meta name="theme-color" content="#C9973A" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Triade Select" />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--ink)] antialiased">
         <Providers>{children}</Providers>
