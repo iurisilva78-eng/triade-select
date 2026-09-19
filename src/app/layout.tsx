@@ -134,7 +134,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="pt-BR" className={fontClasses} data-theme={theme}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: cssOverride }} />
-        <meta name="theme-color" content="#C9973A" />
+        <meta name="theme-color" content="#F6F2EC" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
