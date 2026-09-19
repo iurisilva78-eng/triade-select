@@ -116,6 +116,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
   background:
     radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,255,255,0.45), transparent 70%),
     var(--bg-2);
+  isolation: isolate;
 }
 
 /* ── Textura grain (brand) ────────────────────────────────── */
