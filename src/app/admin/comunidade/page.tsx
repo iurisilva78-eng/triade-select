@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, Trash2, Pencil, X, Check, Upload, GripVertical, Instagram, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Check, Upload, GripVertical, AtSign, Eye, EyeOff } from "lucide-react";
 
 interface BarberSpotlight {
   id: string;
@@ -251,7 +251,7 @@ export default function ComunidadePage() {
                 <div className="text-xs text-[var(--text-muted)] truncate mt-0.5">{item.city}</div>
                 {item.instagramHandle && (
                   <div className="flex items-center gap-1 mt-1 text-[var(--gold)] text-xs">
-                    <Instagram size={10} />
+                    <AtSign size={10} />
                     <span className="truncate">@{item.instagramHandle.replace(/^@/, "")}</span>
                   </div>
                 )}

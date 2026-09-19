@@ -71,6 +71,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clear } = useCartStore();
 
+  const [deliveryMode, setDeliveryMode]   = useState<"shipping" | "personal">("shipping");
   const [cep, setCep]                     = useState("");
   const [address, setAddress]             = useState<AddressData | null>(null);
   const [number, setNumber]               = useState("");
@@ -80,6 +81,13 @@ export default function CheckoutPage() {
   const [loadingCep, setLoadingCep]       = useState(false);
   const [loadingOrder, setLoadingOrder]   = useState(false);
   const [cepError, setCepError]           = useState("");
+
+  const PERSONAL_DELIVERY: FreightOption = {
+    service: "entrega_pessoal",
+    name: "Entrega Pessoal · Londrina / Maringá",
+    price: 0,
+    deliveryDays: 0,
+  };
 
   // Coupon
   const [couponCode, setCouponCode]         = useState("");
@@ -140,8 +148,11 @@ export default function CheckoutPage() {
     return null;
   }
 
+  const isPersonalDelivery = deliveryMode === "personal";
+  const activeFreight      = isPersonalDelivery ? PERSONAL_DELIVERY : selectedFreight;
+
   const subtotal    = total();
-  const freightCost = selectedFreight?.price ?? 0;
+  const freightCost = activeFreight?.price ?? 0;
   const applyFreightDiscount = couponType === "shipping" ? Math.min(couponDiscount, freightCost) : 0;
   const applyCartDiscount    = couponType !== "shipping" ? couponDiscount : 0;
   const totalDiscount        = applyFreightDiscount + applyCartDiscount;
@@ -192,8 +203,8 @@ export default function CheckoutPage() {
   };
 
   const handleFinalize = async () => {
-    if (!address || !selectedFreight) { alert("Calcule o frete antes de continuar."); return; }
-    if (!number)                       { alert("Informe o número do endereço."); return; }
+    if (!address || !activeFreight) { alert("Preencha o endereço antes de continuar."); return; }
+    if (!number)                     { alert("Informe o número do endereço."); return; }
     setLoadingOrder(true);
     try {
       const res  = await fetch("/api/orders", {
@@ -209,7 +220,7 @@ export default function CheckoutPage() {
           })),
           cep: address.cep, street: address.street, number, complement,
           neighborhood: address.neighborhood, city: address.city, state: address.state,
-          freightService: selectedFreight.service, freightCost: selectedFreight.price,
+          freightService: activeFreight.service, freightCost: activeFreight.price,
           couponCode: couponApplied || undefined, couponDiscount: totalDiscount || undefined,
         }),
       });
@@ -273,10 +284,52 @@ export default function CheckoutPage() {
             <p className="t-eyebrow mb-3">— Checkout</p>
             <h1
               className="t-display"
-              style={{ fontSize: "clamp(28px,5vw,56px)", margin: "0 0 28px", lineHeight: 0.95 }}
+              style={{ fontSize: "clamp(28px,5vw,56px)", margin: "0 0 20px", lineHeight: 0.95 }}
             >
               Onde <span className="t-display-italic">entregamos</span>?
             </h1>
+
+            {/* ── Modo de entrega ── */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              {([
+                { mode: "shipping", label: "Envio pelos Correios" },
+                { mode: "personal", label: "Entrega Pessoal · LDA/MGF" },
+              ] as const).map(({ mode, label }) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setDeliveryMode(mode);
+                    if (mode === "personal") { setSelectedFreight(null); }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px 14px",
+                    border: `1px solid ${deliveryMode === mode ? "var(--ink)" : "var(--line-soft)"}`,
+                    background: deliveryMode === mode ? "var(--ink)" : "transparent",
+                    color: deliveryMode === mode ? "var(--bg)" : "var(--ink)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    borderRadius: "var(--r-sm)",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Aviso entrega pessoal */}
+            {isPersonalDelivery && (
+              <div style={{ marginBottom: 20, padding: "14px 16px", border: "1px solid var(--gold)", borderLeft: "3px solid var(--gold)", background: "rgba(168,130,58,0.06)" }}>
+                <p className="t-eyebrow" style={{ color: "var(--gold)", marginBottom: 6, fontSize: 9 }}>Entrega pessoal — Londrina e Maringá</p>
+                <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
+                  A entrega pessoal é realizada gratuitamente nas regiões de <strong style={{ color: "var(--ink)" }}>Londrina</strong> e <strong style={{ color: "var(--ink)" }}>Maringá</strong>, mediante <strong style={{ color: "var(--ink)" }}>disponibilidade de região e de carga</strong>. Nossa equipe entrará em contato pelo WhatsApp para confirmar data e horário.
+                </p>
+              </div>
+            )}
 
             {/* Address */}
             <div style={{ marginBottom: 28 }}>
@@ -334,13 +387,13 @@ export default function CheckoutPage() {
             </div>
 
             {/* Freight */}
-            {freightOptions.length > 0 && (
+            {!isPersonalDelivery && freightOptions.length > 0 && (
               <div style={{ marginBottom: 32 }}>
                 <hr style={{ border: 0, borderTop: "1px solid var(--line-soft)", marginBottom: 24 }} />
-                <p className="t-eyebrow mb-4">— Modo de envio</p>
+                <p className="t-eyebrow mb-4">— Transportadora</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {freightOptions.map((opt) => {
-                    const selected = selectedFreight?.service === opt.service;
+                    const sel = selectedFreight?.service === opt.service;
                     return (
                       <label
                         key={opt.service}
@@ -350,33 +403,21 @@ export default function CheckoutPage() {
                           alignItems: "center",
                           gap: "0 12px",
                           padding: "16px 18px",
-                          border: `1px solid ${selected ? "var(--ink)" : "var(--line-soft)"}`,
-                          background: selected ? "var(--bg-2)" : "transparent",
+                          border: `1px solid ${sel ? "var(--ink)" : "var(--line-soft)"}`,
+                          background: sel ? "var(--bg-2)" : "transparent",
                           cursor: "pointer",
                           borderRadius: "var(--r-sm)",
                           transition: "border-color 0.15s, background 0.15s",
                         }}
                       >
-                        {/* Radio */}
                         <input
                           type="radio"
-                          checked={selected}
+                          checked={sel}
                           onChange={() => setSelectedFreight(opt)}
                           style={{ accentColor: "var(--ink)", width: 16, height: 16, cursor: "pointer" }}
                         />
-
-                        {/* Nome + prazo */}
                         <div style={{ minWidth: 0 }}>
-                          <p style={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: "var(--ink)",
-                            margin: 0,
-                            lineHeight: 1.3,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {opt.name}
                           </p>
                           <p style={{ fontSize: 12, color: "var(--muted)", margin: "3px 0 0", lineHeight: 1 }}>
@@ -384,16 +425,8 @@ export default function CheckoutPage() {
                             {opt.name.includes("estimativa") && " · estimativa"}
                           </p>
                         </div>
-
-                        {/* Preço */}
                         <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <p style={{
-                            fontSize: 16,
-                            fontWeight: 700,
-                            color: "var(--ink)",
-                            margin: 0,
-                            whiteSpace: "nowrap",
-                          }}>
+                          <p style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)", margin: 0, whiteSpace: "nowrap" }}>
                             {formatCurrency(opt.price)}
                           </p>
                         </div>
@@ -405,7 +438,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Finalize button */}
-            {address && selectedFreight && (
+            {address && (isPersonalDelivery || selectedFreight) && (
               <button
                 onClick={handleFinalize}
                 disabled={loadingOrder || !number}
@@ -564,8 +597,10 @@ export default function CheckoutPage() {
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", color: "var(--muted)" }}>
-                  <span>Frete ({selectedFreight?.name ?? "—"})</span>
-                  <span>{selectedFreight ? formatCurrency(freightCost) : "—"}</span>
+                  <span>Frete ({activeFreight?.name ?? "—"})</span>
+                  <span style={{ color: isPersonalDelivery ? "var(--gold)" : undefined }}>
+                    {isPersonalDelivery ? "Grátis" : activeFreight ? formatCurrency(freightCost) : "—"}
+                  </span>
                 </div>
                 {totalDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", color: "var(--gold)" }}>

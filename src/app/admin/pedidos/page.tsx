@@ -18,6 +18,7 @@ interface Order {
   paidAmount: number;
   cancelRequestedAt?: string | null;
   trackingCode?: string;
+  shippingService?: string;
   createdAt: string;
   street: string; number: string; complement?: string;
   neighborhood: string; city: string; state: string; cep: string;
@@ -227,6 +228,9 @@ export default function AdminPedidosPage() {
                       <p className="font-mono font-semibold text-[var(--gold)]">#{order.orderNumber}</p>
                       {isLate && <span className="text-xs text-red-400 font-semibold block">⚠ Atrasado</span>}
                       {hasCancelReq && <span className="text-xs text-amber-400 font-semibold block">⚡ Cancel. solicitado</span>}
+                      {(order as any).shippingService === "entrega_pessoal" && (
+                        <span className="text-xs font-semibold block" style={{ color: "var(--gold)" }}>🚗 Entrega Pessoal</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-[var(--text)]">{order.user.name}</p>
@@ -304,6 +308,16 @@ export default function AdminPedidosPage() {
               <button onClick={() => setSelected(null)} className="text-[var(--text-muted)] hover:text-[var(--text)]"><X size={20} /></button>
             </div>
 
+            {/* Entrega pessoal badge */}
+            {selected.shippingService === "entrega_pessoal" && (
+              <div style={{ marginBottom: 12, padding: "10px 14px", border: "1px solid var(--gold)", borderLeft: "3px solid var(--gold)", background: "rgba(168,130,58,0.08)", borderRadius: 8, fontSize: 12 }}>
+                <span style={{ color: "var(--gold)", fontWeight: 600 }}>🚗 Entrega Pessoal · Londrina/Maringá</span>
+                <span style={{ color: "var(--text-secondary)", display: "block", marginTop: 2 }}>
+                  Combinar data e horário com o cliente pelo WhatsApp.
+                </span>
+              </div>
+            )}
+
             {/* Endereço */}
             <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 mb-4 text-xs text-[var(--text-secondary)]">
               <div className="flex items-center gap-1 text-[var(--gold)] font-semibold mb-1"><MapPin size={12} /> Endereço de entrega</div>
@@ -375,10 +389,15 @@ export default function AdminPedidosPage() {
                     </button>
                   );
                 })}
-                {newStatus === "ENVIADO" && (
+                {newStatus === "ENVIADO" && selected?.shippingService !== "entrega_pessoal" && (
                   <input type="text" placeholder="Código de rastreio (AA000000000BR)"
                     value={trackingCode} onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
                     className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] rounded-xl px-4 py-3 text-sm font-mono outline-none focus:border-[var(--gold)]" />
+                )}
+                {newStatus === "ENVIADO" && selected?.shippingService === "entrega_pessoal" && (
+                  <div style={{ padding: "12px 14px", border: "1px solid var(--gold)", borderLeft: "3px solid var(--gold)", background: "rgba(168,130,58,0.06)", fontSize: 12, color: "var(--muted)", borderRadius: 4 }}>
+                    🚗 Entrega pessoal — sem código de rastreio necessário.
+                  </div>
                 )}
                 <textarea placeholder="Observação interna (opcional)" value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)} rows={2}
