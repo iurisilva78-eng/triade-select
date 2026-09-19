@@ -1,0 +1,77 @@
+{
+  "camiseta": {
+    "name": "Camiseta",
+    "positions": {
+      "frente": {
+        "tamanho_cm": 9,
+        "descricao": "Frente (lado direito)"
+      },
+      "costas": {
+        "tamanho_cm": 25,
+        "descricao": "Costas"
+      }
+    },
+    "cores": ["preto", "branco", "cinza", "azul"]
+  },
+  "polo": {
+    "name": "Polo",
+    "positions": {
+      "frente": {
+        "tamanho_cm": 9,
+        "descricao": "Frente (lado direito)"
+      }
+    },
+    "cores": ["preto", "branco", "cinza", "azul"]
+  },
+  "camisa-social": {
+    "name": "Camisa Social",
+    "positions": {
+      "frente": {
+        "tamanho_cm": 9,
+        "descricao": "Frente (lado direito)"
+      }
+    },
+    "cores": ["preto", "branco", "cinza", "azul"]
+  },
+  "capa": {
+    "name": "Capa",
+    "tipos": {
+      "gola-conforto": {
+        "name": "Gola T Comfort",
+        "positions": {
+          "frente": {
+            "tamanho_cm": 30,
+            "descricao": "Frente (4 dedos abaixo da gola)"
+          }
+        },
+        "cores": {
+          "risca-de-giz": [
+            "preto-branco",
+            "branco-preto",
+            "vermelho-branco",
+            "azul-marinho-branco"
+          ],
+          "cores-lisas": [
+            "preto",
+            "branco",
+            "cinza",
+            "azul-royal",
+            "azul-marinho",
+            "vermelho",
+            "verde"
+          ]
+        }
+      },
+      "gola-normal": {
+        "name": "Gola Normal",
+        "positions": {
+          "frente": {
+            "tamanho_cm": 30,
+            "descricao": "Frente (4 dedos abaixo da gola)"
+          }
+        },
+        "cores": []
+      }
+    }
+  }
+}
