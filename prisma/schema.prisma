@@ -282,3 +282,79 @@ model BarberSpotlight {
 
   @@map("barber_spotlights")
 }
+
+// ─── Financeiro ─────────────────────────────────────────────────────────────
+// Valores em centavos (Int): positivo = entrou na conta, negativo = saiu.
+
+enum FinTipoConta {
+  BANCO // conta PJ (Nubank PJ, Inter PJ)
+  CAIXA // dinheiro vivo
+  SOCIO // conta corrente com o sócio: saldo < 0 = a empresa deve a ele
+}
+
+enum FinTipoCategoria {
+  RECEITA
+  DESPESA
+  RETIRADA      // retirada de lucro (não entra no resultado)
+  TRANSFERENCIA // entre contas da empresa, reembolso ao sócio (neutro)
+  AJUSTE        // saldo inicial / acerto (neutro)
+}
+
+model FinConta {
+  id        String       @id @default(cuid())
+  nome      String       @unique
+  tipo      FinTipoConta
+  ativa     Boolean      @default(true)
+  ordem     Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  lancamentos FinLancamento[]
+
+  @@map("fin_contas")
+}
+
+model FinCategoria {
+  id    String           @id @default(cuid())
+  nome  String           @unique
+  tipo  FinTipoCategoria
+  ordem Int              @default(0)
+
+  lancamentos FinLancamento[]
+  regras      FinRegra[]
+
+  @@map("fin_categorias")
+}
+
+model FinLancamento {
+  id              String   @id @default(cuid())
+  contaId         String
+  data            DateTime @db.Date
+  descricao       String
+  valor           Int
+  categoriaId     String?
+  origem          String   @default("manual") // manual | ofx | pedido
+  chave           String? // dedup da importação, única por conta
+  transferenciaId String? // liga as duas pontas de uma transferência
+  pedidoId        String? // Order conferido com este lançamento
+  obs             String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  conta     FinConta      @relation(fields: [contaId], references: [id])
+  categoria FinCategoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+
+  @@unique([contaId, chave])
+  @@index([data])
+  @@index([pedidoId])
+  @@map("fin_lancamentos")
+}
+
+model FinRegra {
+  id          String @id @default(cuid())
+  padrao      String @unique // trecho normalizado da descrição
+  categoriaId String
+
+  categoria FinCategoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@map("fin_regras")
+}

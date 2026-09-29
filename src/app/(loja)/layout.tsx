@@ -33,6 +33,9 @@ export default function LojaLayout({ children }: { children: React.ReactNode }) 
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Falar no WhatsApp"
+        // Hover em CSS: este layout é Server Component e não pode ter onMouseEnter
+        // (quebrava o build de produção ao pré-renderizar /carrinho).
+        className="shadow-[0_4px_16px_rgba(37,211,102,.45),0_2px_6px_rgba(0,0,0,.18)] hover:scale-[1.08] hover:shadow-[0_6px_24px_rgba(37,211,102,.55),0_2px_8px_rgba(0,0,0,.22)]"
         style={{
           position: "fixed",
           bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
@@ -45,16 +48,7 @@ export default function LojaLayout({ children }: { children: React.ReactNode }) 
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 4px 16px rgba(37,211,102,.45), 0 2px 6px rgba(0,0,0,.18)",
           transition: "transform .2s, box-shadow .2s",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1.08)";
-          (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 6px 24px rgba(37,211,102,.55), 0 2px 8px rgba(0,0,0,.22)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1)";
-          (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 16px rgba(37,211,102,.45), 0 2px 6px rgba(0,0,0,.18)";
         }}
       >
         <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden>
